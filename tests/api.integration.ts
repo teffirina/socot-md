@@ -161,6 +161,68 @@ async function run() {
     where: { invoiceId: invoice.id },
   });
   await assert.rejects(() => db.audit.delete({ where: { id: audit.id } }));
+  const balance = await request(
+    "/ledger-report",
+    { from: "2026-09-01", to: "2026-09-30" },
+    accountant.data.token,
+  );
+  assert.equal(balance.status, 200);
+  assert.equal(
+    balance.data.accounts.find((r: any) => r.code === "221").closing,
+    400000,
+  );
+  assert.equal(
+    (
+      await request(
+        "/ledger-report",
+        { from: "2026-09-01", to: "2026-09-30" },
+        a.data.token,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(
+        "/source-document",
+        { id: invoice.id },
+        accountant.data.token,
+      )
+    ).data.id,
+    invoice.id,
+  );
+  await db.user.create({
+    data: {
+      email: "audit-other@socot.local",
+      passwordHash: await bcrypt.hash(password, 12),
+      companyId: companies[1],
+      role: "auditor",
+    },
+  });
+  const otherAudit = await request("/login", {
+    email: "audit-other@socot.local",
+    password,
+  });
+  assert.equal(
+    (
+      await request(
+        "/source-document",
+        { id: invoice.id },
+        otherAudit.data.token,
+      )
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await request(
+        "/ledger-report",
+        { from: "2026-09-01", to: "2026-09-30" },
+        otherAudit.data.token,
+      )
+    ).data.accounts.length,
+    0,
+  );
   const closing = {
     month: "2026-09",
     closed: true,

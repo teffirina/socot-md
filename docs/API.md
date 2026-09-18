@@ -58,3 +58,9 @@ Nu există API de integrare fiscală, bancară, 1C sau e-Factura. Nu există tra
 | /reports/export | POST | Aceleași roluri; marchează exportul, nu transmiterea oficială |
 
 Permisiunile exacte sunt în `lib/permissions.ts`. Directorul și auditorul nu modifică facturi. Casierul și gestionarul nu au acces implicit la module neimplementate. `chief_accountant` poate opera facturi, pe lângă rolurile din tabelul inițial. Aceste rute administrative nu intră încă în coada offline; serverul returnează succes numai după commit PostgreSQL.
+
+## Rapoarte contabile 0.3 (în dezvoltare)
+
+`POST /ledger-report` primește `{from,to}` (date ISO), cere `journal.read` și calculează balanța din istoricul companiei. Include soldul anterior perioadei; exclude articole nepostate/fără dată. Refuză explicit istoricul peste 100.000 articole în loc să emită un raport incomplet. Nu folosește cache-ul de 200 facturi.
+
+`POST /source-document` primește `{id}` și returnează factura numai din compania sesiunii; 404 inclusiv pentru ID-uri din alte companii. Cere `journal.read`. Starea documentului este cea curentă, nu un snapshot istoric la data raportului.

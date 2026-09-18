@@ -108,7 +108,7 @@ async fn api_request(path: String, body: Option<Value>) -> Result<Value, String>
         "/invoices",
         "/operations",
         "/health",
-        "/compliance", "/company", "/accounts",
+        "/compliance", "/company", "/accounts", "/ledger-report", "/source-document",
         "/rules",
         "/rules/approve",
         "/periods",

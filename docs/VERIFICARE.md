@@ -39,3 +39,9 @@ Verificare UI web: datele vechi au fost recuperate la migrare; profilul demonstr
 - Planul de conturi inițial are trei conturi demonstrative, nu planul național complet.
 
 Sarcina extinsă nu este finalizată. Logurile și instalatoarele locale se găsesc în directorul ignorat `artifacts/`; nu conțin credențiale de producție.
+
+## Rapoarte după analiza capturilor — 0.3 în dezvoltare
+
+24 teste unitare/sincronizare au trecut, inclusiv sold inițial/rulaje/sold final, limite de perioadă, excluderea propunerilor și refuzul sumelor invalide. TypeScript și exportul web au trecut. API PostgreSQL: balanța după încasare parțială, acces refuzat operatorului, acces la sursă și izolare față de auditorul altei companii au trecut. UI web: balanță → cont 221 → document sursă verificat efectiv. Datele demo vechi fără metadate contabile sunt excluse explicit, nu postate automat.
+
+Instalatoarele 0.2.0 nu includ rapoartele noi. Buildurile desktop pentru aceste modificări nu sunt încă declarate verificate. Analiza celor opt capturi se află în REFERINTE-1C.md.

@@ -21,4 +21,4 @@ Specificația inițială descrie o platformă mult mai mare. Produse, stocuri, T
 6. **Neimplementat:** personal, salarii și închidere lunară completă.
 7. **Fundație tehnică:** reguli versionate și adaptoare care refuză explicit transmiterea fără integrare. Formulare oficiale, reguli fiscale validate și migrare 1C nu sunt implementate.
 
-Nu se adaugă butoane decorative pentru etapele neimplementate. Fiecare etapă trebuie verificată pe date demonstrative și API PostgreSQL înainte de a fi declarată finalizată. Capturile de referință menționate în specificație nu au fost atașate; identitatea vizuală Socot este originală.
+Nu se adaugă butoane decorative pentru etapele neimplementate. Fiecare etapă trebuie verificată pe date demonstrative și API PostgreSQL înainte de a fi declarată finalizată. Cele opt capturi au fost furnizate și analizate ulterior în REFERINTE-1C.md. Identitatea vizuală Socot rămâne originală.

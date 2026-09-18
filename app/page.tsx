@@ -2,6 +2,7 @@
 import packageInfo from "../package.json";
 import CompanyPanel from "./company-panel";
 import { can } from "../lib/permissions";
+import LedgerPanel from "./ledger-panel";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -721,35 +722,10 @@ export default function Page() {
                 </section>
               </>
             )}
-          {view === "Rapoarte" && demo && (
-            <section className="panel settings" style={{ marginTop: 20 }}>
-              <h2>Registru jurnal demonstrativ</h2>
-              <p className="muted">
-                Fiecare rând reprezintă un articol cu debit și credit egale.
-                Model fără TVA, pentru validare contabilă.
-              </p>
-              <table>
-                <thead>
-                  <tr>
-                    <th>DOCUMENT SOCOT</th>
-                    <th>DEBIT</th>
-                    <th>CREDIT</th>
-                    <th>SUMĂ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.ledger?.map((j) => (
-                    <tr key={j.id}>
-                      <td>{j.invoiceId.slice(0, 8).toUpperCase()}</td>
-                      <td>{j.debit}</td>
-                      <td>{j.credit}</td>
-                      <td>{money(j.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}{" "}
+          {view === "Rapoarte" &&
+            (demo || can(session.role, "journal.read")) && (
+              <LedgerPanel demo={demo} snapshot={state} />
+            )}
           {view === "Întreprindere" && (
             <CompanyPanel
               demo={demo}

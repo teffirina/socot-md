@@ -1,3 +1,4 @@
+import { ledgerReport, intervalSchema } from "../lib/ledger-report";
 import { can, type Permission } from "../lib/permissions";
 import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
@@ -5,6 +6,45 @@ import { z } from "zod";
 import { ruleSchema, approveRule, type Rule } from "../lib/compliance";
 export function complianceRouter(db: PrismaClient) {
   const router = Router();
+  router.post("/ledger-report", async (req, res) => {
+    if (!can(res.locals.user.role, "journal.read")) {
+      res.status(403).json({ error: "Nu ai acces la registrele contabile." });
+      return;
+    }
+    const { from, to } = intervalSchema.parse(req.body);
+    const rows = await db.journal.findMany({
+      where: {
+        companyId: res.locals.user.companyId,
+        OR: [{ effectiveDate: { lte: to } }, { effectiveDate: null }],
+      },
+      take: 100001,
+    });
+    if (rows.length > 100000) {
+      res
+        .status(422)
+        .json({
+          error:
+            "Istoricul depășește limita raportului. Raportul nu a fost generat parțial.",
+        });
+      return;
+    }
+    res.json(ledgerReport(rows, from, to));
+  });
+  router.post("/source-document", async (req, res) => {
+    if (!can(res.locals.user.role, "journal.read")) {
+      res.status(403).json({ error: "Acces refuzat." });
+      return;
+    }
+    const { id } = z.object({ id: z.uuid() }).parse(req.body);
+    const invoice = await db.invoice.findFirst({
+      where: { id, companyId: res.locals.user.companyId },
+    });
+    if (!invoice) {
+      res.status(404).json({ error: "Documentul nu este disponibil." });
+      return;
+    }
+    res.json(invoice);
+  });
   router.get("/compliance", async (_req, res) => {
     if (!can(res.locals.user.role, "journal.read")) {
       res.status(403).json({ error: "Nu ai acces la registrele contabile." });
@@ -137,11 +177,9 @@ export function complianceRouter(db: PrismaClient) {
       .parse(req.body);
     const user = res.locals.user;
     if (!input.closed && !can(user.role, "period.reopen")) {
-      res
-        .status(403)
-        .json({
-          error: "Redeschiderea necesită contabil-șef sau administrator.",
-        });
+      res.status(403).json({
+        error: "Redeschiderea necesită contabil-șef sau administrator.",
+      });
       return;
     }
     await db.$transaction(async (tx) => {
