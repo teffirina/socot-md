@@ -1,0 +1,6 @@
+{
+  "identifier": "main",
+  "description": "Fereastra locală Socot",
+  "windows": ["main"],
+  "permissions": ["core:default", "updater:default", "process:allow-restart"]
+}

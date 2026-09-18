@@ -1,0 +1,107 @@
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+}
+model User {
+ id String @id @default(uuid())
+ email String @unique
+ passwordHash String
+ companyId String
+ role String @default("operator")
+ sessions Session[]
+}
+model Session {
+ tokenHash String @id
+ userId String
+ user User @relation(fields:[userId],references:[id])
+ expiresAt DateTime
+}
+model Invoice {
+ id String @id
+ companyId String
+ customer String
+ total Int
+ paid Int
+ version Int
+ date String
+ @@index([companyId])
+}
+model Operation {
+ id String @id
+ companyId String
+ userId String
+ requestHash String
+ result Json
+ createdAt DateTime @default(now())
+}
+model Journal {
+ ruleId String?
+ ruleVersion Int?
+ effectiveDate String?
+ state String @default("proposed")
+ approvedBy String?
+ id String @id @default(uuid())
+ companyId String
+ invoiceId String
+ operationId String @unique
+ debit String
+ credit String
+ amount Int
+ createdAt DateTime @default(now())
+}
+model Audit {
+ id String @id @default(uuid())
+ companyId String
+ userId String
+ invoiceId String
+ before Json?
+ after Json
+ createdAt DateTime @default(now())
+}
+model AccountingRule {
+ id String @id
+ companyId String
+ kind String
+ version Int
+ name String
+ debit String
+ credit String
+ validFrom String
+ validTo String?
+ status String @default("draft")
+ source String
+ approvedBy String?
+ demo Boolean @default(false)
+ @@unique([companyId, kind, version])
+ @@index([companyId,kind,status])
+}
+model AccountingPeriod {
+ id String @id @default(uuid())
+ companyId String
+ month String
+ closed Boolean @default(false)
+ reason String
+ changedBy String
+ @@unique([companyId,month])
+}
+model ComplianceAudit {
+ id String @id @default(uuid())
+ companyId String
+ actor String
+ action String
+ objectId String
+ reason String
+ at DateTime @default(now())
+}
+model RegulatoryReport {
+ id String @id
+ companyId String
+ status String @default("generated")
+ createdAt DateTime @default(now())
+ sourceIds Json
+ rows Json
+ receiptId String?
+}

@@ -1,0 +1,42 @@
+# API Socot v0.1
+
+Local: `http://localhost:3000/api`. Producție: adresă HTTPS configurată, nepublicată în această etapă. JSON UTF-8; sume întregi în bani (600000 = 6000,00 MDL). O companie per utilizator în această fundație.
+
+| Rută | Metodă | Autorizare | Efect |
+|---|---|---|---|
+| /health | GET | public | Verifică efectiv PostgreSQL |
+| /login | POST | email, password | Creează sesiune 8 ore; cookie HttpOnly pentru web, token pentru native |
+| /me | GET | sesiune | id, companyId, role |
+| /logout | POST | sesiune | Revocă sesiunea curentă |
+| /invoices | GET | sesiune | Maximum 200 de facturi din compania curentă |
+| /operations | POST | admin/accountant/operator | Emite factura sau adaugă încasarea, atomic cu jurnal și audit |
+
+Desktopul trimite Bearer din stocarea OS, prin Rust; tokenul nu ajunge în JavaScript. Browserul folosește cookie HttpOnly, SameSite=Strict, Secure în producție; originea cererilor este verificată. `NEXT_PUBLIC_APP_URL` trebuie să corespundă originii web. Tokenurile sunt stocate hash-uit pe server. Serverul nu acceptă companyId de la client pentru autorizare.
+
+Exemplu operațiune:
+
+```json
+{
+  "id": "ccb07308-f4a8-463f-a3a7-59c8e8d66f12",
+  "baseVersion": 0,
+  "invoice": {
+    "id": "894a6a0a-d0b6-4e39-8b3d-b0d02195928f",
+    "customer": "Socot client fictiv",
+    "total": 600000,
+    "paid": 0,
+    "version": 0,
+    "date": "2026-09-17"
+  }
+}
+```
+
+Răspuns 200: factura cu versiune incrementată. Pentru o încasare se trimite un UUID nou, `baseVersion` actual și valoarea cumulativă `paid`. Clientul nu poate reduce încasarea sau schimba totalul/clientul/datele unei facturi emise. UUID-ul aceleiași operațiuni este refolosit numai pentru retry identic, cu același utilizator.
+
+- 400: payload invalid; rămâne local și este semnalat.
+- 401: sesiune lipsă/expirată; cere autentificare.
+- 403: rol, companie, origine sau reutilizare nepermisă UUID.
+- 409: `{error, current}`; rezolvare explicită.
+- 429: limitare; reîncercare la următoarea sincronizare.
+- 500: eroare internă; retry idempotent, fără ștergerea cozii.
+
+Nu există API de integrare fiscală, bancară, 1C sau e-Factura. Nu există transmitere demonstrativă prezentată ca reală.

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "demo-sale-v1",
+    "kind": "sale",
+    "version": 1,
+    "name": "Vânzare servicii fără TVA — model",
+    "debit": "221",
+    "credit": "611",
+    "validFrom": "2000-01-01",
+    "validTo": null,
+    "status": "approved",
+    "source": "Model Socot pentru demonstrație; necesită validare contabilă",
+    "approvedBy": "Socot demonstrativ",
+    "demo": true
+  },
+  {
+    "id": "demo-receipt-v1",
+    "kind": "receipt",
+    "version": 1,
+    "name": "Încasare prin bancă — model",
+    "debit": "242",
+    "credit": "221",
+    "validFrom": "2000-01-01",
+    "validTo": null,
+    "status": "approved",
+    "source": "Model Socot pentru demonstrație; necesită validare contabilă",
+    "approvedBy": "Socot demonstrativ",
+    "demo": true
+  }
+]

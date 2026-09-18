@@ -1,0 +1,154 @@
+name: Verify and build Socot
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: socot-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: socot_test
+          POSTGRES_USER: socot
+          POSTGRES_PASSWORD: ci-only-ephemeral-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U socot -d socot_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://socot:ci-only-ephemeral-password@localhost:5432/socot_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run db:migrate
+      - run: npm run build
+      - name: API integration tests against PostgreSQL
+        shell: bash
+        run: |
+          npm run api > api.log 2>&1 &
+          for i in {1..30}; do curl --fail http://localhost:3000/api/health && break || sleep 2; done
+          npx tsx tests/api.integration.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-log
+          path: api.log
+  desktop:
+    needs: api
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis,msi
+          - os: macos-latest
+            bundles: app,dmg
+    runs-on: ${{ matrix.os }}
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      SOCOT_API_URL: ${{ vars.SOCOT_API_URL }}
+      SOCOT_UPDATE_URL: ${{ vars.SOCOT_UPDATE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - run: npm run db:generate
+      - name: Require updater signing key
+        shell: bash
+        run: test -n "$TAURI_SIGNING_PRIVATE_KEY"
+      - run: node scripts/release-config.mjs
+      - name: Build native installers
+        run: npm run desktop:build -- --bundles ${{ matrix.bundles }} --config src-tauri/tauri.release.conf.json
+      - name: Verify Windows installers and executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = Get-Item src-tauri/target/release/Socot.exe
+          if ($exe.Length -lt 100000) { throw "Invalid executable" }
+          $bytes = [IO.File]::ReadAllBytes($exe.FullName)
+          if ($bytes[0] -ne 77 -or $bytes[1] -ne 90) { throw "Missing PE header" }
+          $msi = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi
+          $nsis = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe
+          if (!$msi -or !$nsis) { throw "Installer missing" }
+          $extract = Join-Path $env:RUNNER_TEMP 'socot-msi'
+          $p = Start-Process msiexec.exe -ArgumentList "/a `"$($msi.FullName)`" /qn TARGETDIR=`"$extract`"" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "MSI extraction failed: $($p.ExitCode)" }
+          if (!(Get-ChildItem $extract -Recurse -Filter Socot.exe)) { throw "Socot.exe missing from MSI" }
+          $install = Join-Path $env:RUNNER_TEMP 'socot-nsis'
+          $installer = Start-Process $nsis.FullName -ArgumentList "/S /D=$install" -Wait -PassThru
+          if ($installer.ExitCode -ne 0) { throw "NSIS silent install failed: $($installer.ExitCode)" }
+          $installedExe = Get-ChildItem $install -Recurse -Filter Socot.exe | Select-Object -First 1
+          if (!$installedExe) { throw "NSIS did not install Socot.exe" }
+          $app = Start-Process $installedExe.FullName -PassThru
+          Start-Sleep -Seconds 12
+          if ($app.HasExited) { throw "Socot exited during startup" }
+          Stop-Process -Id $app.Id
+          Get-ChildItem src-tauri/target/release/bundle -Recurse -File | Get-FileHash -Algorithm SHA256 | Format-Table -AutoSize
+      - name: Verify macOS bundle and DMG
+        if: runner.os == 'macOS'
+        run: |
+          test -x src-tauri/target/release/bundle/macos/Socot.app/Contents/MacOS/Socot
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' src-tauri/target/release/bundle/macos/Socot.app/Contents/Info.plist | grep -x md.socot.desktop
+          hdiutil verify src-tauri/target/release/bundle/dmg/*.dmg
+          codesign --verify --deep --strict src-tauri/target/release/bundle/macos/Socot.app
+          shasum -a 256 src-tauri/target/release/bundle/dmg/*.dmg
+      - name: Check updater signatures exist
+        shell: bash
+        run: test -n "$(find src-tauri/target/release/bundle -name '*.sig' -print -quit)"
+      - name: Verify signed packages and reject tampering
+        shell: bash
+        run: |
+          while IFS= read -r -d '' signature; do
+            cargo run --manifest-path src-tauri/Cargo.toml --release --example verify_update -- src-tauri/updater.pub "${signature%.sig}" "$signature"
+          done < <(find src-tauri/target/release/bundle -name '*.sig' -print0)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Socot-${{ matrix.os }}
+          path: |
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*-setup.exe
+            src-tauri/target/release/bundle/**/*.tar.gz
+            src-tauri/target/release/bundle/**/*.sig
+          if-no-files-found: error
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [api, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Socot-*
+          path: installers
+          merge-multiple: true
+      - name: Create private draft release with verified installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" --draft --title "Socot $GITHUB_REF_NAME" --notes "Builduri verificate în CI. Release privat în draft; nu este publicare a aplicației. Semnături updater incluse. macOS nu este notarizat și Windows nu are certificat Authenticode."
+          find installers -type f -print0 | xargs -0 gh release upload "$GITHUB_REF_NAME"

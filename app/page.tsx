@@ -1,0 +1,866 @@
+"use client";
+import CompliancePanel from "./compliance-panel";
+import { useEffect, useRef, useState } from "react";
+import { api, ApiError } from "../lib/api";
+import { desktop, readValue, writeValue, type Snapshot } from "../lib/storage";
+import { SyncEngine } from "../lib/sync";
+import { totals, invoiceSchema, type Invoice } from "../lib/domain";
+const money = (v: number) =>
+  new Intl.NumberFormat("ro-MD", { style: "currency", currency: "MDL" }).format(
+    v / 100,
+  );
+export default function Page() {
+  const [session, setSession] = useState<{
+      id: string;
+      companyId: string;
+      role: string;
+    } | null>(null),
+    [demo, setDemo] = useState(false),
+    [state, setState] = useState<Snapshot>({ invoices: [], pending: [] }),
+    [status, setStatus] = useState("Neconectat"),
+    [error, setError] = useState(""),
+    [view, setView] = useState("Panou principal"),
+    [form, setForm] = useState(false),
+    [busy, setBusy] = useState(false),
+    [query, setQuery] = useState(""),
+    [update, setUpdate] = useState<any>(null),
+    [native, setNative] = useState(false),
+    [payment, setPayment] = useState<Invoice | null>(null),
+    [ready, setReady] = useState(false),
+    [blocked, setBlocked] = useState(false);
+  const engine = useRef<SyncEngine | null>(null);
+  const sum = totals(state.invoices);
+  const writable = demo || session?.role !== "director";
+  async function start(
+    user: { id: string; companyId: string; role: string },
+    isDemo = false,
+  ) {
+    setError("");
+    const e = new SyncEngine(
+      isDemo ? "demo-v1" : `${user.companyId}:${user.id}`,
+      isDemo,
+      (s, status) => {
+        setState({ ...s });
+        setStatus(status);
+      },
+    );
+    await e.load();
+    await writeValue("last-profile", { user, isDemo });
+    engine.current = e;
+    setDemo(isDemo);
+    setSession(user);
+    await e.sync();
+  }
+  useEffect(() => {
+    setNative(desktop());
+    let release: (() => void) | undefined;
+    let disposed = false;
+    const boot = async () => {
+      try {
+        const cached = await readValue<{
+          user: { id: string; companyId: string; role: string };
+          isDemo: boolean;
+        }>("last-profile");
+        if (cached?.isDemo) {
+          await start(cached.user, true);
+        } else {
+          try {
+            const r = await api("/me");
+            await start(r.user);
+          } catch (e) {
+            if (cached && !(e instanceof ApiError && e.status === 401))
+              await start(cached.user, false);
+          }
+        }
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setReady(true);
+      }
+    };
+    if (desktop()) {
+      void boot();
+    } else if (navigator.locks) {
+      void navigator.locks.request(
+        "socot-single-window",
+        { ifAvailable: true },
+        async (lock) => {
+          if (!lock) {
+            setBlocked(true);
+            setReady(true);
+            return;
+          }
+          if (disposed) return;
+          await boot();
+          await new Promise<void>((resolve) => {
+            release = resolve;
+            if (disposed) resolve();
+          });
+        },
+      );
+    } else {
+      setBlocked(true);
+      setReady(true);
+    }
+    return () => {
+      disposed = true;
+      release?.();
+    };
+  }, []);
+  useEffect(() => {
+    const run = () => engine.current?.sync();
+    const timer = setInterval(run, 15000);
+    window.addEventListener("online", run);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("online", run);
+    };
+  }, []);
+  useEffect(() => {
+    if (!native) return;
+    import("@tauri-apps/plugin-updater")
+      .then(({ check }) => check())
+      .then(setUpdate)
+      .catch(() => {});
+  }, [native]);
+  async function action(fn: () => Promise<void>) {
+    setBusy(true);
+    setError("");
+    try {
+      await fn();
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function login(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    await action(async () => {
+      const result = await api("/login", {
+        email: f.get("email"),
+        password: f.get("password"),
+      });
+      await start(result.user);
+    });
+  }
+  async function create(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    await action(async () => {
+      const invoice = invoiceSchema.parse({
+        id: crypto.randomUUID(),
+        customer: f.get("customer"),
+        total: Math.round(Number(f.get("total")) * 100),
+        paid: 0,
+        version: 0,
+        date: new Date().toISOString().slice(0, 10),
+      });
+      await engine.current!.enqueue(invoice);
+      setForm(false);
+    });
+  }
+  async function pay(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!payment) return;
+    const invoice = payment;
+    const f = new FormData(e.currentTarget);
+    const cents = Math.round(Number(f.get("amount")) * 100);
+    if (
+      !Number.isFinite(cents) ||
+      cents <= 0 ||
+      cents > invoice.total - invoice.paid
+    ) {
+      setError("Introdu o sumă pozitivă, cel mult egală cu restul de plată.");
+      return;
+    }
+    await action(async () => {
+      await engine.current!.enqueue({ ...invoice, paid: invoice.paid + cents });
+      setPayment(null);
+    });
+  }
+  async function logout() {
+    if (state.pending.length) {
+      setError(
+        "Există operațiuni nesincronizate. Rezolvă-le înainte de deconectare.",
+      );
+      return;
+    }
+    await action(async () => {
+      if (!demo) {
+        await api("/logout", {});
+        await writeValue(engine.current!.scope, { invoices: [], pending: [] });
+      }
+      await writeValue("last-profile", null);
+      engine.current = null;
+      setSession(null);
+      setState({ invoices: [], pending: [] });
+      setDemo(false);
+    });
+  }
+  function exportCsv() {
+    const rows = [
+      ["Socot", "Client", "Data", "Total MDL", "Încasat MDL"],
+      ...state.invoices.map((i) => [
+        i.id,
+        i.customer,
+        i.date,
+        i.total / 100,
+        i.paid / 100,
+      ]),
+    ];
+    const csv = rows
+      .map((r) =>
+        r
+          .map(
+            (c) =>
+              '"' +
+              String(c)
+                .replace(/^[=+@-]/, "'")
+                .replaceAll('"', '""') +
+              '"',
+          )
+          .join(","),
+      )
+      .join("\n");
+    const url = URL.createObjectURL(
+      new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Socot-facturi.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  if (!ready || blocked)
+    return (
+      <main className="loginform">
+        <div className="brand">
+          <img src="/mark.svg" alt="" />
+          Socot
+        </div>
+        <h2>{blocked ? "Socot este deja deschis" : "Se deschide Socot…"}</h2>
+        {blocked && (
+          <p>
+            Folosește prima filă Socot sau închide-o și reîncarcă această
+            pagină. Este necesar un browser cu suport Web Locks.
+          </p>
+        )}
+      </main>
+    );
+  if (!session)
+    return (
+      <main className="login">
+        <section className="story">
+          <div className="brand">
+            <img src="/mark.svg" alt="" />
+            Socot<span>finanțe cu sens</span>
+          </div>
+          <div>
+            <p className="eyebrow">UN SPAȚIU PENTRU AFACEREA TA</p>
+            <h1>
+              Mai multă claritate.
+              <br />
+              Mai mult echilibru.
+            </h1>
+            <p>
+              Facturi, încasări și o perspectivă limpede asupra banilor. Într-un
+              singur loc.
+            </p>
+            <div className="art">
+              <div className="orb" />
+              <div className="paper">
+                <small>SOCOT / ÎN ECHILIBRU</small>
+                <strong>Totul se leagă.</strong>
+                <span>Vânzare → Încasare → Claritate</span>
+                <i />
+                <i />
+                <i />
+              </div>
+            </div>
+          </div>
+          <small>Creat pentru afaceri din Moldova · MDL</small>
+        </section>
+        <section className="loginform">
+          <p className="eyebrow">BINE AI VENIT</p>
+          <h2>Intră în Socot</h2>
+          <p className="muted">Spațiul tău financiar, la îndemână.</p>
+          <form onSubmit={login}>
+            <label>
+              E-mail
+              <input
+                name="email"
+                type="email"
+                autoComplete="username"
+                required
+                placeholder="nume@companie.md"
+              />
+            </label>
+            <label>
+              Parolă
+              <input
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <button disabled={busy}>Conectare →</button>
+          </form>
+          <div className="divider">sau explorează</div>
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={() =>
+              action(() =>
+                start({ id: "demo", companyId: "demo", role: "admin" }, true),
+              )
+            }
+          >
+            Deschide demonstrația {native ? "SQLite" : "în browser"}
+          </button>
+          <p className="footnote">
+            Date fictive, salvate pe acest dispozitiv.{" "}
+            {native ? "Bază SQLite criptată." : "Stocare IndexedDB în browser."}{" "}
+            Fără cont și fără transmitere către server.
+          </p>
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
+        </section>
+      </main>
+    );
+  return (
+    <div className="shell">
+      <aside>
+        <div className="brand">
+          <img src="/mark.svg" alt="" />
+          Socot
+        </div>
+        <div className="company">
+          <span className="avatar">S</span>
+          <div>
+            <strong>{demo ? "Socot Atelier SRL" : "Compania mea"}</strong>
+            <small>{demo ? "Companie demonstrativă" : session.role}</small>
+          </div>
+        </div>
+        <p className="navlabel">SPAȚIUL DE LUCRU</p>
+        <nav>
+          {[
+            "Panou principal",
+            "Vânzări",
+            "Rapoarte",
+            ...(demo || ["admin", "accountant"].includes(session.role)
+              ? ["Contabilitate"]
+              : []),
+            "Setări",
+          ].map((v, i) => (
+            <button
+              className={view === v ? "active" : ""}
+              key={v}
+              onClick={() => setView(v)}
+            >
+              <span>{["◫", "↗", "▥", "≋", "⚙"][i]}</span>
+              {v}
+            </button>
+          ))}
+        </nav>
+        <div className="asidebottom">
+          <span className="pill">{native ? "DESKTOP" : "WEB"} · 0.1.0</span>
+          <p>
+            O afacere în echilibru
+            <br />
+            începe cu ordine.
+          </p>
+          <button className="textbutton" onClick={logout}>
+            Deconectare ↗
+          </button>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header>
+          <span>
+            Socot <span className="slash">/</span> {view}
+          </span>
+          <div className="connection" role="status">
+            <i className={status.startsWith("Offline") ? "offline" : ""} />
+            {demo
+              ? native
+                ? "Demo local · SQLite"
+                : "Demo local · browser"
+              : status}
+            {status.startsWith("Sesiune expirată") && (
+              <button className="textbutton" onClick={() => setSession(null)}>
+                Reautentificare
+              </button>
+            )}
+          </div>
+        </header>
+        <main className="content">
+          <div className="heading">
+            <div>
+              <p className="eyebrow">
+                {demo
+                  ? "SOCOT ATELIER SRL · DEMONSTRAȚIE"
+                  : "SPAȚIUL TĂU FINANCIAR"}
+              </p>
+              <h1>
+                {view === "Panou principal"
+                  ? "Afacerea ta, dintr-o privire."
+                  : view}
+              </h1>
+              <p className="muted">
+                {view === "Panou principal"
+                  ? "Mai puține întrebări. O imagine mai clară a banilor tăi."
+                  : "Documente simple. Informații la zi."}
+              </p>
+            </div>
+            {writable && (
+              <button onClick={() => setForm(true)}>＋ Factură nouă</button>
+            )}
+          </div>
+          {error && (
+            <div className="error" role="alert">
+              {error}
+            </div>
+          )}
+          {update && (
+            <div className="notice">
+              O versiune nouă Socot este disponibilă.{" "}
+              <button
+                disabled={busy || state.pending.length > 0}
+                onClick={() =>
+                  action(async () => {
+                    await update.downloadAndInstall();
+                    const { relaunch } =
+                      await import("@tauri-apps/plugin-process");
+                    await relaunch();
+                  })
+                }
+              >
+                Instalează actualizarea semnată
+              </button>
+            </div>
+          )}
+          {state.pending.length > 0 && (
+            <section className="notice">
+              <strong>{state.pending.length} operațiuni păstrate local</strong>
+              <p>
+                Se trimit automat când API-ul devine disponibil. Nu închide
+                contul înainte de sincronizare.
+              </p>
+              {state.pending.map((p) => (
+                <div key={p.id} className="pending">
+                  <span>
+                    {p.invoice.customer} · {money(p.invoice.total)}
+                    {p.error && ` — ${p.error}`}
+                  </span>
+                  {p.error && (
+                    <button
+                      className="secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        action(() => engine.current!.discardRejected(p.id))
+                      }
+                    >
+                      Anulează operațiunea respinsă
+                    </button>
+                  )}
+                  {p.conflict !== undefined && (
+                    <>
+                      <p>
+                        Conflict: încasat local {money(p.invoice.paid)} / server{" "}
+                        {money(p.conflict?.paid ?? 0)}. Alege explicit
+                        versiunea.
+                      </p>
+                      <button
+                        className="secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          action(() => engine.current!.resolve(p.id, false))
+                        }
+                      >
+                        Păstrează serverul
+                      </button>{" "}
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          action(() => engine.current!.resolve(p.id, true))
+                        }
+                      >
+                        Confirmă încasarea locală
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+              <button
+                className="secondary"
+                onClick={() => engine.current?.sync()}
+              >
+                Reîncearcă sincronizarea
+              </button>
+            </section>
+          )}
+          {view !== "Setări" && view !== "Contabilitate" && (
+            <>
+              <section className="metrics">
+                {[
+                  ["Vânzări înregistrate", sum.sales, "↗"],
+                  ["Încasări", sum.paid, "↓"],
+                  ["De încasat", sum.due, "◷"],
+                ].map(([label, value, icon]) => (
+                  <article key={label}>
+                    <div>
+                      {label}
+                      <span>{icon}</span>
+                    </div>
+                    <strong>{money(Number(value))}</strong>
+                    <small>Din documentele salvate · MDL</small>
+                  </article>
+                ))}
+              </section>
+              {view === "Panou principal" && (
+                <section className="overview">
+                  <div>
+                    <p className="eyebrow">DE LA FACTURĂ LA ÎNCASARE</p>
+                    <h2>Banii tăi au o direcție.</h2>
+                    <p className="muted">
+                      Urmărește partea încasată din vânzările înregistrate.
+                    </p>
+                    <div className="progress">
+                      <i
+                        style={{
+                          width: `${sum.sales ? (sum.paid / sum.sales) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="legend">
+                      <span>
+                        ● Încasat{" "}
+                        {sum.sales
+                          ? Math.round((sum.paid / sum.sales) * 100)
+                          : 0}
+                        %
+                      </span>
+                      <span>○ Rămas de încasat</span>
+                    </div>
+                  </div>
+                  <div className="tip">
+                    <span>UN PAS ÎNAINTE</span>
+                    <h3>
+                      {state.invoices.length
+                        ? "Continuă cu o încasare."
+                        : "Prima factură, primul pas."}
+                    </h3>
+                    <p>
+                      {state.invoices.length
+                        ? "Înregistrează plățile primite și vezi cum se actualizează creanțele."
+                        : "Creează o factură demonstrativă. Toate sumele de aici provin din documentele tale."}
+                    </p>
+                  </div>
+                </section>
+              )}
+              <section className="panel">
+                <div className="panelhead">
+                  <div>
+                    <h2>
+                      {view === "Rapoarte"
+                        ? "Situația creanțelor"
+                        : "Facturi de vânzare"}
+                    </h2>
+                    <p className="muted">
+                      {state.invoices.length} documente ·{" "}
+                      {demo
+                        ? "Socot demonstrativ"
+                        : "ultimele 200 de documente"}
+                    </p>
+                  </div>
+                  <div className="controls">
+                    <input
+                      aria-label="Caută client"
+                      placeholder="Caută un client…"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                    <button className="secondary" onClick={exportCsv}>
+                      Export CSV ↗
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() => window.print()}
+                    >
+                      Imprimă / PDF
+                    </button>
+                  </div>
+                </div>
+                <div className="tablewrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>DOCUMENT / CLIENT</th>
+                        <th>DATA</th>
+                        <th>TOTAL</th>
+                        <th>DE ÎNCASAT</th>
+                        <th>STARE</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {state.invoices
+                        .filter((i) =>
+                          i.customer
+                            .toLowerCase()
+                            .includes(query.toLowerCase()),
+                        )
+                        .map((i) => (
+                          <tr key={i.id}>
+                            <td>
+                              <strong>{i.customer}</strong>
+                              <small>
+                                Socot · {i.id.slice(0, 8).toUpperCase()}
+                              </small>
+                            </td>
+                            <td>{i.date}</td>
+                            <td>{money(i.total)}</td>
+                            <td>{money(i.total - i.paid)}</td>
+                            <td>
+                              <span
+                                className={`badge ${i.paid === i.total ? "paid" : ""}`}
+                              >
+                                {i.paid === i.total
+                                  ? "Achitată"
+                                  : i.paid
+                                    ? "Parțial achitată"
+                                    : "Emisă"}
+                              </span>
+                            </td>
+                            <td>
+                              {writable && i.paid < i.total && (
+                                <button
+                                  className="textbutton"
+                                  disabled={
+                                    busy ||
+                                    state.pending.some(
+                                      (p) => p.invoice.id === i.id,
+                                    )
+                                  }
+                                  onClick={() => setPayment(i)}
+                                >
+                                  Încasează ↗
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+                {!state.invoices.length && (
+                  <div className="empty">
+                    <span>▤</span>
+                    <h3>Aici începe ordinea.</h3>
+                    <p>
+                      Adaugă prima factură pentru a vedea vânzările și
+                      creanțele.
+                    </p>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+          {view === "Rapoarte" && demo && (
+            <section className="panel settings" style={{ marginTop: 20 }}>
+              <h2>Registru jurnal demonstrativ</h2>
+              <p className="muted">
+                Fiecare rând reprezintă un articol cu debit și credit egale.
+                Model fără TVA, pentru validare contabilă.
+              </p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>DOCUMENT SOCOT</th>
+                    <th>DEBIT</th>
+                    <th>CREDIT</th>
+                    <th>SUMĂ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.ledger?.map((j) => (
+                    <tr key={j.id}>
+                      <td>{j.invoiceId.slice(0, 8).toUpperCase()}</td>
+                      <td>{j.debit}</td>
+                      <td>{j.credit}</td>
+                      <td>{money(j.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}{" "}
+          {view === "Contabilitate" && (
+            <CompliancePanel
+              demo={demo}
+              snapshot={state}
+              engine={engine.current!}
+            />
+          )}
+          {view === "Setări" && (
+            <section className="panel settings">
+              <h2>Socot pe dispozitivul tău</h2>
+              <p>Versiunea 0.1.0 · Identificator md.socot.desktop</p>
+              <h3>Conexiune și date locale</h3>
+              <p>
+                Sincronizare automată la 15 secunde și la revenirea conexiunii.
+                Sunt păstrate cel mult 200 de facturi și operațiunile în
+                așteptare. Operațiunile confirmate sunt eliminate din coadă.
+              </p>
+              <p>
+                {native
+                  ? "SQLite criptat AES-GCM; cheia și sesiunea API sunt păstrate în stocarea securizată a sistemului."
+                  : "Browser: IndexedDB pentru facturi și coadă; sesiune în cookie HttpOnly. Folosește un profil de browser personal."}
+              </p>
+              <h3>Actualizări</h3>
+              <p>
+                Buildul local demonstrativ nu are un canal de distribuție activ.
+                Release-urile configurate verifică automat actualizările semnate
+                la pornire.
+              </p>
+              <button
+                className="secondary"
+                disabled={!native || busy}
+                onClick={() =>
+                  action(async () => {
+                    const { check } =
+                      await import("@tauri-apps/plugin-updater");
+                    const next = await check();
+                    setUpdate(next);
+                    setError(
+                      next ? "" : "Nu există o actualizare disponibilă.",
+                    );
+                  })
+                }
+              >
+                Verifică actualizări
+              </button>
+              <h3>Model contabil demonstrativ</h3>
+              <p>
+                Vânzare: debit 221 / credit 611. Încasare: debit 242 / credit
+                221. Model simplificat fără TVA, produse sau stocuri; necesită
+                validare contabilă înainte de utilizare reală.
+              </p>
+            </section>
+          )}
+          <footer>
+            Socot · Claritate pentru fiecare zi.
+            <span>
+              {demo
+                ? "Date demonstrative · Nu reprezintă factură fiscală"
+                : "MDL · ro-MD"}
+            </span>
+          </footer>
+        </main>
+      </div>
+      {payment && (
+        <div className="modalback">
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-title"
+          >
+            <p className="eyebrow">ÎNCASARE SOCOT</p>
+            <h2 id="payment-title">Înregistrează încasarea</h2>
+            <p>{payment.customer}</p>
+            <p className="muted">
+              Rest de plată: {money(payment.total - payment.paid)}
+            </p>
+            <form onSubmit={pay}>
+              <label>
+                Suma încasată (MDL)
+                <input
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  max={(payment.total - payment.paid) / 100}
+                  step="0.01"
+                  required
+                  autoFocus
+                />
+              </label>
+              <p className="footnote">
+                Confirmarea înregistrează plata și reduce creanța.
+              </p>
+              <div className="controls">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setPayment(null)}
+                >
+                  Renunță
+                </button>
+                <button disabled={busy}>Confirmă încasarea</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+      {form && (
+        <div className="modalback">
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invoice-title"
+          >
+            <p className="eyebrow">DOCUMENT SOCOT</p>
+            <h2 id="invoice-title">Factură nouă</h2>
+            <p className="muted">Flux simplificat pentru servicii, fără TVA.</p>
+            <form onSubmit={create}>
+              <label>
+                Client
+                <input
+                  name="customer"
+                  autoFocus
+                  required
+                  minLength={2}
+                  maxLength={120}
+                  placeholder="Denumirea clientului"
+                />
+              </label>
+              <label>
+                Total (MDL)
+                <input
+                  name="total"
+                  required
+                  type="number"
+                  min="0.01"
+                  max="1000000"
+                  step="0.01"
+                  placeholder="0,00"
+                />
+              </label>
+              <p className="footnote">
+                Prin confirmare înregistrezi vânzarea și creanța. În modul API,
+                serverul creează articolul contabil și auditul.
+              </p>
+              <div className="controls">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setForm(false)}
+                >
+                  Renunță
+                </button>
+                <button disabled={busy}>Confirmă factura</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,233 @@
+import { demoRules } from "../lib/compliance";
+import assert from "node:assert/strict";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+const db = new PrismaClient();
+let disposable = false;
+const base = "http://localhost:3000/api";
+const password = crypto.randomUUID();
+const companies = ["test-company-a", "test-company-b"];
+async function request(path: string, body?: any, token?: string) {
+  const res = await fetch(base + path, {
+    method: body ? "POST" : "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return { status: res.status, data: await res.json() };
+}
+async function run() {
+  const databases = await db.$queryRaw<
+    { current_database: string }[]
+  >`SELECT current_database()`;
+  assert.equal(
+    databases[0].current_database,
+    "socot_test",
+    "Use only the dedicated socot_test database",
+  );
+  disposable = true;
+  for (const companyId of companies)
+    for (const rule of demoRules)
+      await db.accountingRule.create({
+        data: {
+          ...rule,
+          id: crypto.randomUUID(),
+          companyId,
+          demo: false,
+          approvedBy: "test-accountant",
+        },
+      });
+  for (const [index, companyId] of companies.entries()) {
+    await db.user.create({
+      data: {
+        email: `test-${index}@socot.local`,
+        passwordHash: await bcrypt.hash(password, 12),
+        companyId,
+        role: index ? "director" : "operator",
+      },
+    });
+  }
+  await db.user.create({
+    data: {
+      email: "accountant-test@socot.local",
+      passwordHash: await bcrypt.hash(password, 12),
+      companyId: companies[0],
+      role: "accountant",
+    },
+  });
+  const accountant = await request("/login", {
+    email: "accountant-test@socot.local",
+    password,
+  });
+  const a = await request("/login", { email: "test-0@socot.local", password });
+  const b = await request("/login", { email: "test-1@socot.local", password });
+  assert.equal(a.status, 200);
+  assert.equal(b.status, 200);
+  assert.equal((await request("/invoices")).status, 401);
+  const invoice = {
+    id: crypto.randomUUID(),
+    customer: "Client fictiv Socot",
+    total: 600000,
+    paid: 0,
+    version: 0,
+    date: "2026-09-17",
+  };
+  const op = { id: crypto.randomUUID(), invoice, baseVersion: 0 };
+  const results = await Promise.all([
+    request("/operations", op, a.data.token),
+    request("/operations", op, a.data.token),
+  ]);
+  assert.ok(results.every((x) => x.status === 200));
+  assert.equal(await db.journal.count({ where: { invoiceId: invoice.id } }), 1);
+  assert.equal((await request("/operations", op, b.data.token)).status, 403);
+  assert.equal(
+    (await request("/invoices", undefined, b.data.token)).data.length,
+    0,
+  );
+  const paid = {
+    id: crypto.randomUUID(),
+    invoice: { ...invoice, paid: 200000, version: 1 },
+    baseVersion: 1,
+  };
+  assert.equal((await request("/operations", paid, a.data.token)).status, 200);
+  const stale = await request(
+    "/operations",
+    { ...paid, id: crypto.randomUUID() },
+    a.data.token,
+  );
+  assert.equal(stale.status, 409);
+  assert.equal(stale.data.current.paid, 200000);
+  assert.equal(await db.audit.count({ where: { invoiceId: invoice.id } }), 2);
+  assert.equal(await db.journal.count({ where: { invoiceId: invoice.id } }), 2);
+  const journals = await db.journal.findMany({
+    where: { invoiceId: invoice.id },
+  });
+  for (const j of journals) {
+    assert.equal(j.ruleVersion, 1);
+    assert.equal(
+      (
+        await request(
+          "/journal/approve",
+          { id: j.id, reason: "Test verified balanced entry" },
+          accountant.data.token,
+        )
+      ).status,
+      200,
+    );
+  }
+  await assert.rejects(() =>
+    db.journal.update({ where: { id: journals[0].id }, data: { amount: 1 } }),
+  );
+  const audit = await db.audit.findFirstOrThrow({
+    where: { invoiceId: invoice.id },
+  });
+  await assert.rejects(() => db.audit.delete({ where: { id: audit.id } }));
+  const closing = {
+    month: "2026-09",
+    closed: true,
+    reason: "Test close after all postings checked",
+  };
+  assert.equal((await request("/periods", closing, a.data.token)).status, 403);
+  assert.equal(
+    (await request("/periods", closing, accountant.data.token)).status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(
+        "/operations",
+        {
+          id: crypto.randomUUID(),
+          invoice: { ...invoice, id: crypto.randomUUID() },
+          baseVersion: 0,
+        },
+        a.data.token,
+      )
+    ).status,
+    422,
+  );
+  assert.equal(
+    (
+      await request(
+        "/periods",
+        {
+          ...closing,
+          closed: false,
+          reason: "Test authorised reopening with explanation",
+        },
+        accountant.data.token,
+      )
+    ).status,
+    200,
+  );
+  const newRule = {
+    ...demoRules[0],
+    id: crypto.randomUUID(),
+    version: 2,
+    debit: "222",
+    validFrom: "2026-10-01",
+    status: "draft",
+    approvedBy: null,
+    demo: false,
+  };
+  assert.equal(
+    (await request("/rules", newRule, accountant.data.token)).status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(
+        "/rules/approve",
+        { id: newRule.id, reason: "Test source and mapping reviewed" },
+        accountant.data.token,
+      )
+    ).status,
+    200,
+  );
+  const october = { ...invoice, id: crypto.randomUUID(), date: "2026-10-03" };
+  assert.equal(
+    (
+      await request(
+        "/operations",
+        { id: crypto.randomUUID(), invoice: october, baseVersion: 0 },
+        a.data.token,
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await db.journal.findFirstOrThrow({ where: { invoiceId: october.id } }))
+      .ruleVersion,
+    2,
+  );
+  await assert.rejects(() =>
+    db.accountingRule.update({
+      where: { id: newRule.id },
+      data: { debit: "333" },
+    }),
+  );
+  const report = await request("/reports", {}, accountant.data.token);
+  assert.equal(report.data.status, "generated");
+  const exported = await request(
+    "/reports/export",
+    { id: report.data.id },
+    accountant.data.token,
+  );
+  assert.equal(exported.data.status, "exported");
+  assert.equal(exported.data.receiptId, null);
+  console.log(
+    "PASS: versioned rules, immutable audit/journal/rules, period close/reopen, role enforcement, report export without fabricated receipt",
+  );
+  console.log(
+    "PASS: auth, RBAC, tenant isolation, concurrent idempotency, payment, conflict, audit, journal",
+  );
+}
+run().finally(async () => {
+  if (disposable)
+    await db.$executeRawUnsafe(
+      'TRUNCATE "User", "Session", "Invoice", "Operation", "Journal", "Audit", "AccountingRule", "AccountingPeriod", "ComplianceAudit", "RegulatoryReport" CASCADE',
+    );
+  await db.$disconnect();
+});

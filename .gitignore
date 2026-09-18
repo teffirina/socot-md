@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+src-tauri/target/
+.tools/
+.env
+.env.local
+*.key
+*.key.pub
+artifacts/*
+!artifacts/.gitkeep
+
+src-tauri/tauri.release.conf.json
+*.tsbuildinfo
+
+.DS_Store
