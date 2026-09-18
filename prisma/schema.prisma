@@ -105,3 +105,17 @@ model RegulatoryReport {
  rows Json
  receiptId String?
 }
+model CompanyProfile {
+ id String @id
+ data Json
+ version Int @default(1)
+ updatedAt DateTime @updatedAt
+}
+model ChartAccount {
+ id String @id @default(uuid())
+ companyId String
+ code String
+ data Json
+ version Int @default(1)
+ @@unique([companyId,code])
+}

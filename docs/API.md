@@ -40,3 +40,21 @@ Răspuns 200: factura cu versiune incrementată. Pentru o încasare se trimite u
 - 500: eroare internă; retry idempotent, fără ștergerea cozii.
 
 Nu există API de integrare fiscală, bancară, 1C sau e-Factura. Nu există transmitere demonstrativă prezentată ca reală.
+
+## Extensii 0.2
+
+| Rută | Metodă | Permisiune / efect |
+|---|---|---|
+| /company | GET | Profilul companiei sesiunii și versiunea curentă |
+| /company | POST | Administrator; `{data, baseVersion, reason}`; 409 la versiune veche, audit atomic |
+| /accounts | GET | Citire jurnal; planul companiei |
+| /accounts | POST | Administrator/contabil-șef; creare cont validat și audit; 200 la succes |
+| /compliance | GET | Citire jurnal; reguli, perioade, articole, rapoarte, audit |
+| /rules | POST | Creare versiune de regulă de către contabil sau contabil-șef/admin |
+| /rules/approve | POST | Contabil-șef/admin; aprobarea explicită a versiunii |
+| /periods | POST | Închidere: contabil/contabil-șef/admin; redeschidere: contabil-șef/admin |
+| /journal/approve | POST | Contabil/contabil-șef/admin; postează articolul propus |
+| /reports | POST | Contabil/contabil-șef/admin; snapshot intern de creanțe |
+| /reports/export | POST | Aceleași roluri; marchează exportul, nu transmiterea oficială |
+
+Permisiunile exacte sunt în `lib/permissions.ts`. Directorul și auditorul nu modifică facturi. Casierul și gestionarul nu au acces implicit la module neimplementate. `chief_accountant` poate opera facturi, pe lângă rolurile din tabelul inițial. Aceste rute administrative nu intră încă în coada offline; serverul returnează succes numai după commit PostgreSQL.

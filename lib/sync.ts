@@ -60,6 +60,22 @@ export class SyncEngine {
       const next = applyOperation(old, op);
       await this.commit({
         ...this.state,
+        compliance: {
+          ...compliance,
+          audit: [
+            {
+              id: crypto.randomUUID(),
+              action: old ? "receipt.created" : "invoice.created",
+              objectId: invoice.id,
+              reason: old
+                ? "Încasare confirmată de utilizator"
+                : "Factură confirmată de utilizator",
+              actor: "Utilizator demo",
+              at: new Date().toISOString(),
+            },
+            ...compliance.audit,
+          ],
+        },
         invoices: [
           ...this.state.invoices.filter((i) => i.id !== invoice.id),
           next,
@@ -185,7 +201,9 @@ export class SyncEngine {
         this.state,
         e instanceof ApiError && e.status === 401
           ? "Sesiune expirată • autentifică-te din nou"
-          : "Offline • operațiunile sunt păstrate",
+          : e instanceof ApiError && e.status === 403
+            ? "Acces refuzat • verifică drepturile rolului"
+            : "Offline • operațiunile sunt păstrate",
       );
     } finally {
       this.running = false;

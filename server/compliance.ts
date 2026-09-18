@@ -1,3 +1,4 @@
+import { can, type Permission } from "../lib/permissions";
 import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
@@ -5,6 +6,10 @@ import { ruleSchema, approveRule, type Rule } from "../lib/compliance";
 export function complianceRouter(db: PrismaClient) {
   const router = Router();
   router.get("/compliance", async (_req, res) => {
+    if (!can(res.locals.user.role, "journal.read")) {
+      res.status(403).json({ error: "Nu ai acces la registrele contabile." });
+      return;
+    }
     const companyId = res.locals.user.companyId;
     const [rules, periods, reports, audit, ledger] = await Promise.all([
       db.accountingRule.findMany({
@@ -46,7 +51,21 @@ export function complianceRouter(db: PrismaClient) {
       "/reports/export",
     ],
     (_req, res, next) => {
-      if (!["admin", "accountant"].includes(res.locals.user.role)) {
+      const access: Record<string, Permission> = {
+        "/rules": "rule.create",
+        "/rules/approve": "rule.approve",
+        "/periods": "period.close",
+        "/journal/approve": "journal.post",
+        "/reports": "report.generate",
+        "/reports/export": "report.generate",
+      };
+      if (
+        !can(
+          res.locals.user.role,
+          access[_req.originalUrl.split("?")[0].replace(/^\/api/, "")] ??
+            "rule.approve",
+        )
+      ) {
         res
           .status(403)
           .json({ error: "Este necesar rolul de contabil sau administrator." });
@@ -117,6 +136,14 @@ export function complianceRouter(db: PrismaClient) {
       })
       .parse(req.body);
     const user = res.locals.user;
+    if (!input.closed && !can(user.role, "period.reopen")) {
+      res
+        .status(403)
+        .json({
+          error: "Redeschiderea necesită contabil-șef sau administrator.",
+        });
+      return;
+    }
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`company:${user.companyId}`}))`;
       if (

@@ -1,9 +1,12 @@
+import type { Company, Account } from "./company";
 import type { ComplianceState } from "./compliance";
 import type { Invoice, Pending } from "./domain";
 export type Snapshot = {
   invoices: Invoice[];
   pending: Pending[];
   compliance?: ComplianceState;
+  company?: Company;
+  accounts?: Account[];
   ledger?: {
     id: string;
     invoiceId: string;
@@ -26,6 +29,41 @@ async function db() {
     r.onerror = () => reject(r.error);
   });
 }
+async function migrateBrowserDemo(d: IDBDatabase, target: string) {
+  return new Promise<void>((resolve, reject) => {
+    const tx = d.transaction("state", "readwrite", { durability: "strict" });
+    const store = tx.objectStore("state");
+    const old = store.get("demo-v1");
+    old.onsuccess = () => {
+      if (!old.result) return;
+      const current = store.get(target);
+      current.onsuccess = () => {
+        const previous = old.result as Snapshot;
+        const next = current.result as Snapshot | undefined;
+        const unique = <T extends { id: string }>(items: T[]) => [
+          ...new Map(items.map((i) => [i.id, i])).values(),
+        ];
+        store.put(
+          {
+            ...previous,
+            ...next,
+            invoices: unique([...previous.invoices, ...(next?.invoices ?? [])]),
+            pending: unique([...previous.pending, ...(next?.pending ?? [])]),
+            ledger: unique([
+              ...(previous.ledger ?? []),
+              ...(next?.ledger ?? []),
+            ]),
+          },
+          target,
+        );
+        store.delete("demo-v1");
+      };
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
 export async function readValue<T>(scope: string): Promise<T | null> {
   if (desktop()) {
     const { invoke } = await import("@tauri-apps/api/core");
@@ -34,6 +72,7 @@ export async function readValue<T>(scope: string): Promise<T | null> {
   }
   scope = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api"}|${scope}`;
   const d = await db();
+  if (scope.endsWith("|demo-v1")) await migrateBrowserDemo(d, scope);
   return new Promise((resolve, reject) => {
     const t = d.transaction("state", "readonly");
     const r = t.objectStore("state").get(scope);

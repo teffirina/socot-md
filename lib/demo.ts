@@ -1,3 +1,4 @@
+import { demoCompany, demoAccounts } from "./company";
 import { initialCompliance } from "./compliance";
 import { applyOperation, journal, type Invoice } from "./domain";
 import type { Snapshot } from "./storage";
@@ -33,6 +34,10 @@ export function demoData(): Snapshot {
       id: crypto.randomUUID(),
       invoiceId: i.id,
       ...journal(null, issued),
+      effectiveDate: issued.date,
+      ruleId: "demo-sale-v1",
+      ruleVersion: 1,
+      state: "posted",
     });
     if (paid) {
       const next = applyOperation(issued, {
@@ -44,9 +49,20 @@ export function demoData(): Snapshot {
         id: crypto.randomUUID(),
         invoiceId: i.id,
         ...journal(issued, next),
+        effectiveDate: next.date,
+        ruleId: "demo-receipt-v1",
+        ruleVersion: 1,
+        state: "posted",
       });
       invoices.push(next);
     } else invoices.push(issued);
   });
-  return { invoices, pending: [], ledger, compliance: initialCompliance() };
+  return {
+    invoices,
+    pending: [],
+    ledger,
+    compliance: initialCompliance(),
+    company: structuredClone(demoCompany),
+    accounts: structuredClone(demoAccounts),
+  };
 }

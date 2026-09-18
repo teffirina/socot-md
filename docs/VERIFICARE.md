@@ -1,43 +1,40 @@
-# Verificări reale — 17 septembrie 2026
+# Verificări reale — 18 septembrie 2026
 
-## Rezultat curent
+## Instalatoare 0.1.0 confirmate
 
-Sarcina NU este încă finalizată: EXE/MSI nu au fost generate, iar codul nu a fost încă încărcat în repository-ul privat. Autorizarea GitHub CLI a expirat fără aprobare; este necesară reautorizarea pentru push și Actions.
+Commit `08af0eea76a4f1b24abc3fa12608e306141c9b98`, [Actions 35305164936](https://github.com/teffirina/socot-md/actions/runs/35305164936): toate joburile de test/build au trecut.
 
-## Executate cu succes
+- Windows x64: EXE NSIS și MSI reale; verificat antetul PE, extragerea administrativă MSI, instalarea silențioasă NSIS și pornirea executabilului instalat timp de 12 secunde pe runner Windows. Nu este un test manual exhaustiv al interfeței Windows.
+- macOS ARM64: DMG real; `hdiutil verify` și `codesign --verify --deep --strict` reușite. Pornire locală și utilizare SQLite demonstrate. Identificator `md.socot.desktop`, executabil `Socot`.
+- Pachetele updater Windows/macOS au semnături verificate criptografic; un pachet alterat a fost respins.
+- Cele șapte fișiere au fost încărcate în release-ul privat **draft v0.1.0**. Repo-ul rămâne privat. Niciun site sau domeniu nu a fost publicat.
+- Copii locale: `artifacts/ci-08af0ee/`.
 
-- Build Next.js static pentru web și aceeași interfață inclusă în Tauri 2.
-- TypeScript, fără erori.
-- 10 teste unitare și de sincronizare: emitere, plată parțială, creanță, validare sume, conflict, persistență după restart, răspuns pierdut și retry cu același ID, apeluri concurente, disc plin, date demo pe trei luni, alegerea explicită a versiunii locale.
-- API verificat cu un proces PostgreSQL 18.4 temporar, ascultând numai pe loopback; migrația a fost aplicată. Autentificare, autorizare pe rol, izolarea companiilor, idempotency concurentă, încasare, conflict, audit și jurnal: PASS. Procesul și baza de test au fost oprite/eliminate la final. Acesta nu a fost un test Docker.
-- `Socot.app`, executabil Mach-O ARM64 `Socot`, identificator `md.socot.desktop`.
-- DMG real `Socot_0.1.0_aarch64.dmg`, verificare checksum `hdiutil verify`.
-- Semnare ad-hoc a pachetului macOS; `codesign --verify --deep --strict` a trecut după corectare.
-- Pornire reală a aplicației macOS și acces la demonstrația SQLite.
-- Baza locală: `PRAGMA integrity_check = ok`; payload-ul facturii nu este text în clar.
-- Pachet updater `Socot.app.tar.gz` și `.sig` generate. Verificare cu cheia publică: PASS; alterarea pachetului este respinsă.
-- Audit npm pentru dependențele de producție: 0 vulnerabilități raportate la momentul verificării, după actualizarea dependenței tranzitive.
-- Test UI web: autentificare demonstrativă, emitere factură 6000 MDL și actualizarea creanței.
+## Modificări 0.2.0
 
-## Erori întâlnite și remedieri
+Profil companie cu control de versiune, conturi configurabile, opt roluri și permisiuni explicite, migrarea cache-ului web vechi, imprimare nativă și avertisment contabil. Instalatoarele 0.1.0 nu includ aceste modificări.
 
-1. TypeScript: rezultatul `invoke` era `unknown`; adăugat tipul răspunsului nativ.
-2. macOS: pachetul inițial avea semnătură incompletă (`code has no resources but signature indicates they must be present`). Configurat `signingIdentity: "-"`, refăcut buildul și verificat strict.
-3. Dialogul `window.prompt` nu a funcționat în browserul de test. Înlocuit cu formular React pentru încasare și confirmare explicită.
-4. `deepmerge-ts` avea un advisory pentru epuizarea stivei la grafuri recursive. Actualizat la versiunea 8 prin override și reluat verificările.
-5. Prevenite concurența între instanțe/file, pierderea accesului la coadă după expirarea sesiunii și reutilizarea cache-ului între endpoint-uri API diferite.
+Verificate local: 21 teste unitare/sincronizare, TypeScript și export Next.js. Testele API au rulat pe PostgreSQL temporar 18.4 cu trei migrații: izolare companii, autorizare, profil cu conflict 409, creare cont, idempotency concurentă, încasare, audit/jurnal nemodificabile, reguli versionate, închidere/redeschidere perioadă și export raport fără recipisă inventată. Testul folosește numai baza dedicată `socot_test`, eliminată la final.
 
-## Neexecutate / limite
+Verificare UI web: datele vechi au fost recuperate la migrare; profilul demonstrativ a fost salvat. Pe macOS, comanda nativă de imprimare a deschis dialogul real de imprimare/PDF; exportul unui PDF final nu a fost încă verificat.
 
-- Build Windows, instalare EXE/MSI și smoke test Windows: în așteptarea accesului CLI la GitHub și a runnerului Windows.
-- Workflow-ul GitHub Actions este scris, dar nu a rulat încă.
-- Publicarea artefactelor în release privat draft nu a avut loc încă.
-- Docker lipsește: symlink-ul existent trimite la o aplicație Docker absentă. Compose este livrat, dar nu a fost rulat local.
-- Nu există API public și nici canal updater public. Adresele propuse nu au fost activate sau folosite ca servicii existente.
-- Test de actualizare completă între două versiuni instalate: neexecutat; au fost verificate semnătura și respingerea pachetului modificat.
-- Fără certificat Apple Developer/notarizare și fără certificat Authenticode Windows.
-- Numai macOS ARM64 verificat local. Intel necesită build separat.
-- Backup/restaurare, migrarea între versiuni de business, scenarii E2E exhaustive și conformitatea fiscală nu sunt validate.
-- Modul demo păstrează documentele local până la ștergere explicită; cache-ul API este limitat la 200 documente. Erorile permanente necesită anulare explicită și recreare; nu sunt șterse automat.
+## Erori reale întâlnite
 
-Loguri locale: `artifacts/desktop-build.log`, `artifacts/tests.log`, `artifacts/api-integration.log`, `artifacts/update-verification.log`, `artifacts/npm-audit.json`. Acestea nu sunt commit-uite automat. Instalatoarele se află în `src-tauri/target/release/bundle/`.
+- Semnătură macOS incompletă în primul build: remediată prin semnare ad-hoc și rebuild; verificarea strictă a trecut.
+- `window.prompt` indisponibil în browserul de test: înlocuit cu formular React pentru încasări.
+- Tip Prisma JSON nullable în auditul profilului: corectat cu `Prisma.JsonNull`.
+- Testul nou de creare cont aștepta 201, ruta întorcea 200: testul a fost aliniat contractului; rerularea a trecut.
+- Accesul refuzat era afișat ca offline: mesaj separat pentru HTTP 403 și ecran de acces limitat pentru rolurile fără module implementate.
+- `npx` nu există în PATH-ul local: comenzile de formatare folosesc direct executabilul Node al pachetului.
+
+## Limite rămase
+
+- macOS este semnat ad-hoc, fără notarizare Apple; Windows fără certificat Authenticode. Acestea sunt distincte de semnăturile updater.
+- Nu există API public ori canal HTTPS updater activ. Instalarea unei actualizări complete între două versiuni nu a fost testată.
+- Docker lipsește local; configurația Docker PostgreSQL 17 a fost însă executată în Actions. Testul local PostgreSQL nu este prezentat ca test Docker.
+- macOS Intel necompilat; Windows UI verificat numai prin smoke test de pornire.
+- Operațiunile offline acoperă facturile/încasările. Configurarea firmei, conturilor și operațiunile administrative API necesită conexiune; formularele păstrează valorile la eșec, dar nu sunt în coada persistentă.
+- Backup/restaurare completă, achiziții/stocuri/salarii, integrare guvernamentală și conformitate fiscală nu sunt validate sau finalizate.
+- Planul de conturi inițial are trei conturi demonstrative, nu planul național complet.
+
+Sarcina extinsă nu este finalizată. Logurile și instalatoarele locale se găsesc în directorul ignorat `artifacts/`; nu conțin credențiale de producție.

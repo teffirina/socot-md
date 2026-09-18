@@ -750,3 +750,31 @@ select {
   font-size: 10px;
   padding: 9px;
 }
+textarea {
+  display: block;
+  width: 100%;
+  margin-top: 9px;
+  padding: 13px;
+  font: inherit;
+  border: 1px solid #dce4df;
+  border-radius: 8px;
+  color: var(--ink);
+}
+.checklabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.checklabel input {
+  width: auto;
+  margin: 0;
+}
+fieldset:disabled {
+  opacity: 0.75;
+}
+.legalnote {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 24px;
+}

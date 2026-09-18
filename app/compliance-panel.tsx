@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { can } from "../lib/permissions";
 import { api } from "../lib/api";
 import {
   initialCompliance,
@@ -14,10 +15,12 @@ import type { Snapshot } from "../lib/storage";
 import type { SyncEngine } from "../lib/sync";
 export default function CompliancePanel({
   demo,
+  role,
   snapshot,
   engine,
 }: {
   demo: boolean;
+  role: string;
   snapshot: Snapshot;
   engine: SyncEngine;
 }) {
@@ -302,7 +305,10 @@ export default function CompliancePanel({
                       Aprobat de: {r.approvedBy ?? "—"}
                     </p>
                     {r.status === "draft" && (
-                      <button disabled={busy} onClick={() => approve(r)}>
+                      <button
+                        disabled={busy || (!demo && !can(role, "rule.approve"))}
+                        onClick={() => approve(r)}
+                      >
                         Confirmă aprobarea versiunii
                       </button>
                     )}
@@ -312,55 +318,60 @@ export default function CompliancePanel({
               <details>
                 <summary>Adaugă o versiune de regulă</summary>
                 <form onSubmit={addRule}>
-                  <div className="formgrid">
+                  <fieldset
+                    disabled={!demo && !can(role, "rule.create")}
+                    style={{ border: 0, padding: 0 }}
+                  >
+                    <div className="formgrid">
+                      <label>
+                        Denumire
+                        <input name="name" required minLength={3} />
+                      </label>
+                      <label>
+                        Tip
+                        <select name="kind">
+                          <option value="sale">Vânzare</option>
+                          <option value="receipt">Încasare</option>
+                        </select>
+                      </label>
+                      <label>
+                        Versiune
+                        <input
+                          name="version"
+                          type="number"
+                          required
+                          min="1"
+                          defaultValue={2}
+                        />
+                      </label>
+                      <label>
+                        Debit
+                        <input name="debit" required pattern="[0-9]{3,8}" />
+                      </label>
+                      <label>
+                        Credit
+                        <input name="credit" required pattern="[0-9]{3,8}" />
+                      </label>
+                      <label>
+                        Valabilă de la
+                        <input name="validFrom" type="date" required />
+                      </label>
+                      <label>
+                        Valabilă până la (opțional)
+                        <input name="validTo" type="date" />
+                      </label>
+                    </div>
                     <label>
-                      Denumire
-                      <input name="name" required minLength={3} />
-                    </label>
-                    <label>
-                      Tip
-                      <select name="kind">
-                        <option value="sale">Vânzare</option>
-                        <option value="receipt">Încasare</option>
-                      </select>
-                    </label>
-                    <label>
-                      Versiune
+                      Sursa și referința verificată
                       <input
-                        name="version"
-                        type="number"
+                        name="source"
                         required
-                        min="1"
-                        defaultValue={2}
+                        minLength={10}
+                        maxLength={500}
                       />
                     </label>
-                    <label>
-                      Debit
-                      <input name="debit" required pattern="[0-9]{3,8}" />
-                    </label>
-                    <label>
-                      Credit
-                      <input name="credit" required pattern="[0-9]{3,8}" />
-                    </label>
-                    <label>
-                      Valabilă de la
-                      <input name="validFrom" type="date" required />
-                    </label>
-                    <label>
-                      Valabilă până la (opțional)
-                      <input name="validTo" type="date" />
-                    </label>
-                  </div>
-                  <label>
-                    Sursa și referința verificată
-                    <input
-                      name="source"
-                      required
-                      minLength={10}
-                      maxLength={500}
-                    />
-                  </label>
-                  <button disabled={busy}>Salvează ciorna regulii</button>
+                    <button disabled={busy}>Salvează ciorna regulii</button>
+                  </fieldset>
                 </form>
               </details>
             </>
@@ -378,20 +389,32 @@ export default function CompliancePanel({
                 </p>
               ))}
               <form onSubmit={period}>
-                <div className="formgrid">
-                  <label>
-                    Luna
-                    <input name="month" type="month" required />
-                  </label>
-                  <label>
-                    Acțiune
-                    <select name="state">
-                      <option value="closed">Închide perioada</option>
-                      <option value="open">Redeschide perioada</option>
-                    </select>
-                  </label>
-                </div>
-                <button disabled={busy}>Confirmă modificarea perioadei</button>
+                <fieldset
+                  disabled={!demo && !can(role, "period.close")}
+                  style={{ border: 0, padding: 0 }}
+                >
+                  <div className="formgrid">
+                    <label>
+                      Luna
+                      <input name="month" type="month" required />
+                    </label>
+                    <label>
+                      Acțiune
+                      <select name="state">
+                        <option value="closed">Închide perioada</option>
+                        <option
+                          value="open"
+                          disabled={!demo && !can(role, "period.reopen")}
+                        >
+                          Redeschide perioada
+                        </option>
+                      </select>
+                    </label>
+                  </div>
+                  <button disabled={busy}>
+                    Confirmă modificarea perioadei
+                  </button>
+                </fieldset>
               </form>
             </>
           )}
@@ -430,7 +453,12 @@ export default function CompliancePanel({
                         </td>
                         <td>
                           {j.state === "proposed" ? (
-                            <button disabled={busy} onClick={() => post(j.id)}>
+                            <button
+                              disabled={
+                                busy || (!demo && !can(role, "journal.post"))
+                              }
+                              onClick={() => post(j.id)}
+                            >
                               Aprobă și postează
                             </button>
                           ) : j.state === "posted" ? (
@@ -456,7 +484,10 @@ export default function CompliancePanel({
                 Integrare oficială neconfigurată — netransmisă. Raportul de
                 creanțe este intern, nu declarație fiscală.
               </p>
-              <button disabled={busy} onClick={generate}>
+              <button
+                disabled={busy || (!demo && !can(role, "report.generate"))}
+                onClick={generate}
+              >
                 Generează situația creanțelor
               </button>
               {data.reports.map((r) => (
@@ -472,7 +503,7 @@ export default function CompliancePanel({
                   </p>
                   <button
                     className="secondary"
-                    disabled={busy}
+                    disabled={busy || (!demo && !can(role, "report.generate"))}
                     onClick={() => exportReport(r)}
                   >
                     Exportă CSV

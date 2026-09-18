@@ -108,7 +108,7 @@ async fn api_request(path: String, body: Option<Value>) -> Result<Value, String>
         "/invoices",
         "/operations",
         "/health",
-        "/compliance",
+        "/compliance", "/company", "/accounts",
         "/rules",
         "/rules/approve",
         "/periods",
@@ -154,6 +154,8 @@ async fn api_request(path: String, body: Option<Value>) -> Result<Value, String>
     }
     Ok(json!({"status":status,"data":data}))
 }
+#[tauri::command]
+fn print_document(window:tauri::WebviewWindow)->Result<(),String>{window.print().map_err(|e|e.to_string())}
 fn main() {
-    tauri::Builder::default().plugin(tauri_plugin_single_instance::init(|app,_,_|{if let Some(w)=app.get_webview_window("main"){let _=w.set_focus();}})).plugin(tauri_plugin_updater::Builder::new().build()).plugin(tauri_plugin_process::init()).setup(|app|{let dir=app.path().app_data_dir()?;std::fs::create_dir_all(&dir)?;let db=Connection::open(dir.join("socot.sqlite"))?;db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; CREATE TABLE IF NOT EXISTS local_state(scope TEXT PRIMARY KEY,payload BLOB NOT NULL); PRAGMA user_version=1;")?;app.manage(Store(Mutex::new(db)));Ok(())}).invoke_handler(tauri::generate_handler![local_read,local_write,api_request]).run(tauri::generate_context!()).expect("Socot nu a putut porni");
+    tauri::Builder::default().plugin(tauri_plugin_single_instance::init(|app,_,_|{if let Some(w)=app.get_webview_window("main"){let _=w.set_focus();}})).plugin(tauri_plugin_updater::Builder::new().build()).plugin(tauri_plugin_process::init()).setup(|app|{let dir=app.path().app_data_dir()?;std::fs::create_dir_all(&dir)?;let db=Connection::open(dir.join("socot.sqlite"))?;db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; CREATE TABLE IF NOT EXISTS local_state(scope TEXT PRIMARY KEY,payload BLOB NOT NULL); PRAGMA user_version=1;")?;app.manage(Store(Mutex::new(db)));Ok(())}).invoke_handler(tauri::generate_handler![local_read,local_write,api_request,print_document]).run(tauri::generate_context!()).expect("Socot nu a putut porni");
 }

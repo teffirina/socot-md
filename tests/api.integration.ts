@@ -1,3 +1,4 @@
+import { demoCompany, demoAccounts } from "../lib/company";
 import { demoRules } from "../lib/compliance";
 import assert from "node:assert/strict";
 import { PrismaClient } from "@prisma/client";
@@ -54,13 +55,49 @@ async function run() {
       email: "accountant-test@socot.local",
       passwordHash: await bcrypt.hash(password, 12),
       companyId: companies[0],
-      role: "accountant",
+      role: "chief_accountant",
     },
   });
   const accountant = await request("/login", {
     email: "accountant-test@socot.local",
     password,
   });
+  await db.user.create({
+    data: {
+      email: "admin-test@socot.local",
+      passwordHash: await bcrypt.hash(password, 12),
+      companyId: companies[0],
+      role: "admin",
+    },
+  });
+  const admin = await request("/login", {
+    email: "admin-test@socot.local",
+    password,
+  });
+  const profile = {
+    data: demoCompany,
+    baseVersion: 0,
+    reason: "Configurare inițială verificată în test",
+  };
+  assert.equal(
+    (await request("/company", profile, accountant.data.token)).status,
+    403,
+  );
+  const saved = await request("/company", profile, admin.data.token);
+  assert.equal(saved.status, 200);
+  assert.equal(saved.data.version, 1);
+  assert.equal(
+    (await request("/company", profile, admin.data.token)).status,
+    409,
+  );
+  assert.equal(
+    (await request("/company", undefined, admin.data.token)).data.data.name,
+    demoCompany.name,
+  );
+  assert.equal(
+    (await request("/accounts", demoAccounts[0], accountant.data.token)).status,
+    200,
+  );
   const a = await request("/login", { email: "test-0@socot.local", password });
   const b = await request("/login", { email: "test-1@socot.local", password });
   assert.equal(a.status, 200);
@@ -227,7 +264,7 @@ async function run() {
 run().finally(async () => {
   if (disposable)
     await db.$executeRawUnsafe(
-      'TRUNCATE "User", "Session", "Invoice", "Operation", "Journal", "Audit", "AccountingRule", "AccountingPeriod", "ComplianceAudit", "RegulatoryReport" CASCADE',
+      'TRUNCATE "User", "Session", "Invoice", "Operation", "Journal", "Audit", "AccountingRule", "AccountingPeriod", "ComplianceAudit", "RegulatoryReport", "CompanyProfile", "ChartAccount" CASCADE',
     );
   await db.$disconnect();
 });

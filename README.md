@@ -23,7 +23,7 @@ node --env-file=.env --import tsx server/index.ts
 
 Deschide `http://localhost:3000`. API-ul este la `http://localhost:3000/api`. Web este export static în `out/`; serverul Express servește fișierele și API-ul. Pentru editarea interfeței, rulează `npm run dev -- --port 3001`; setează originea permisă a API-ului la `http://localhost:3001` în timpul dezvoltării.
 
-Inițializare conturi demonstrative: setează temporar variabila `SOCOT_DEMO_PASSWORD` la o valoare de minimum 12 caractere și execută `npm run db:seed` cu `DATABASE_URL` disponibil. Nu salva parola de autentificare în repository. Conturile sunt `admin@demo.socot.local`, `director@demo.socot.local`, `accountant@demo.socot.local`, `operator@demo.socot.local`. Parolele sunt hash-uite bcrypt pe server. Directorul are acces de citire; celelalte roluri pot emite facturi și înregistra încasări.
+Inițializare conturi demonstrative: setează temporar variabila `SOCOT_DEMO_PASSWORD` la o valoare de minimum 12 caractere și execută `npm run db:seed` cu `DATABASE_URL` disponibil. Nu salva parola de autentificare în repository. Conturile au forma `<rol>@demo.socot.local`, pentru rolurile `admin`, `director`, `chief_accountant`, `accountant`, `cashier`, `warehouse`, `operator`, `auditor`. Parolele sunt hash-uite bcrypt pe server. Permisiunile sunt explicite în `lib/permissions.ts`; casierul și gestionarul au acces limitat până la implementarea modulelor lor. Directorul și auditorul nu pot modifica facturi.
 
 ## Desktop și demonstrație SQLite
 
