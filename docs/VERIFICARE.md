@@ -10,13 +10,13 @@ Commit `08af0eea76a4f1b24abc3fa12608e306141c9b98`, [Actions 35305164936](https:/
 - Cele șapte fișiere au fost încărcate în release-ul privat **draft v0.1.0**. Repo-ul rămâne privat. Niciun site sau domeniu nu a fost publicat.
 - Copii locale: `artifacts/ci-08af0ee/`.
 
-## Modificări 0.2.0
+## Versiunea 0.2.0 verificată
 
-Profil companie cu control de versiune, conturi configurabile, opt roluri și permisiuni explicite, migrarea cache-ului web vechi, imprimare nativă și avertisment contabil. Instalatoarele 0.1.0 nu includ aceste modificări.
+Profil companie cu control de versiune, conturi configurabile, opt roluri și permisiuni explicite, migrarea cache-ului web vechi, imprimare nativă și avertisment contabil. Instalatoarele 0.1.0 nu includ aceste modificări. Pentru 0.2.0, commit `e06324c7d2457ba52e0ba821a621a9634e62a20b`, [Actions 35343138362](https://github.com/teffirina/socot-md/actions/runs/35343138362) a trecut complet: API PostgreSQL 17 în Docker și ambele builduri native cu verificările de instalare/pornire Windows, DMG și semnături updater. Artefactele descărcate sunt în `artifacts/ci-e06324c/`.
 
 Verificate local: 21 teste unitare/sincronizare, TypeScript și export Next.js. Testele API au rulat pe PostgreSQL temporar 18.4 cu trei migrații: izolare companii, autorizare, profil cu conflict 409, creare cont, idempotency concurentă, încasare, audit/jurnal nemodificabile, reguli versionate, închidere/redeschidere perioadă și export raport fără recipisă inventată. Testul folosește numai baza dedicată `socot_test`, eliminată la final.
 
-Verificare UI web: datele vechi au fost recuperate la migrare; profilul demonstrativ a fost salvat. Pe macOS, comanda nativă de imprimare a deschis dialogul real de imprimare/PDF; exportul unui PDF final nu a fost încă verificat.
+Verificare UI web: datele vechi au fost recuperate la migrare; profilul demonstrativ a fost salvat în web și desktop SQLite. Pe macOS, 0.2.0 a pornit și a păstrat cele două facturi locale existente, inclusiv documentul de 0,05 MDL. DMG-ul local a trecut verificarea checksum și semnătura ad-hoc; pachetul updater a trecut verificarea criptografică și testul de alterare. Comanda nativă de imprimare a deschis dialogul real de imprimare/PDF; exportul unui PDF final nu a fost încă verificat.
 
 ## Erori reale întâlnite
 
@@ -25,6 +25,7 @@ Verificare UI web: datele vechi au fost recuperate la migrare; profilul demonstr
 - Tip Prisma JSON nullable în auditul profilului: corectat cu `Prisma.JsonNull`.
 - Testul nou de creare cont aștepta 201, ruta întorcea 200: testul a fost aliniat contractului; rerularea a trecut.
 - Accesul refuzat era afișat ca offline: mesaj separat pentru HTTP 403 și ecran de acces limitat pentru rolurile fără module implementate.
+- Semnarea locală updater 0.2.0 a cerut parolă într-un proces neinteractiv: remediată prin furnizarea explicită a parolei goale pentru cheia fără parolă; semnarea și verificarea ulterioară au trecut.
 - `npx` nu există în PATH-ul local: comenzile de formatare folosesc direct executabilul Node al pachetului.
 
 ## Limite rămase

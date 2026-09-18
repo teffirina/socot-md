@@ -61,6 +61,10 @@ Cheia publică de verificare este în `src-tauri/updater.pub`. Cheia privată nu
 npm run tauri signer generate -w /cale/privata/socot.key
 # Păstrează cheia și parola în seiful organizației, în afara proiectului.
 # Copiază NUMAI cheia publică în src-tauri/updater.pub.
+export TAURI_SIGNING_PRIVATE_KEY=/cale/privata/socot.key
+# Pentru o cheie fără parolă, definește explicit variabila goală:
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""
+# Pentru chei protejate, injectează parola din seif în mediul procesului.
 node scripts/release-config.mjs
 npm run desktop:build -- --config src-tauri/tauri.release.conf.json
 ```
@@ -84,6 +88,8 @@ npm run db:migrate
 npx tsx tests/api.integration.ts
 ```
 
-Testul de integrare creează și șterge exclusiv companiile `test-company-a/b`; folosește numai o bază de test. Documentație API: [docs/API.md](docs/API.md). Domeniu și limitări: [docs/PLAN.md](docs/PLAN.md).
+Testul de integrare refuză o bază care nu se numește `socot_test`. La final golește tabelele acestei baze: folosește exclusiv o instanță temporară, fără date de lucru. Documentație API: [docs/API.md](docs/API.md). Domeniu și limitări: [docs/PLAN.md](docs/PLAN.md).
 
 Pentru producție sunt necesare găzduire autorizată, TLS, backup și restaurare testate, monitorizare, rotația secretelor, politici de acces și validarea contabilă. Desktopul nu conține credențiale PostgreSQL.
+
+Documentație suplimentară: [arhitectură](docs/ARHITECTURA.md), [catalog și matrice document–registru–raport](docs/CATALOG-DOCUMENTE.md), [securitate](docs/SECURITATE.md).
