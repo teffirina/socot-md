@@ -24,6 +24,7 @@ export default function Page() {
     [status, setStatus] = useState("Neconectat"),
     [error, setError] = useState(""),
     [view, setView] = useState("Acasă"),
+    [reportView, setReportView] = useState("Creanțe"),
     [form, setForm] = useState(false),
     [busy, setBusy] = useState(false),
     [query, setQuery] = useState(""),
@@ -373,50 +374,57 @@ export default function Page() {
             <small>{demo ? "Companie demonstrativă" : session.role}</small>
           </div>
         </div>
-        <p className="navlabel">SPAȚIUL DE LUCRU</p>
-        <nav>
+        <nav aria-label="Navigare principală">
           {[
-            "Acasă",
-            "Întreprindere",
-            "Vânzări",
-            "Rapoarte",
-            ...(demo || can(session.role, "journal.read")
-              ? ["Contabilitate"]
-              : []),
-            "Setări",
-          ].map((v, i) => (
-            <button
-              className={view === v ? "active" : ""}
-              key={v}
-              onClick={() => setView(v)}
-            >
-              <span>
-                {
-                  (
+            { label: "ACTIVITATE", items: ["Acasă", "Vânzări"] },
+            {
+              label: "CONTABILITATE",
+              items: [
+                ...(demo || can(session.role, "journal.read")
+                  ? ["Contabilitate"]
+                  : []),
+                "Rapoarte",
+              ],
+            },
+            { label: "ADMINISTRARE", items: ["Întreprindere", "Setări"] },
+          ].map((group) => (
+            <div key={group.label}>
+              <p className="navlabel">{group.label}</p>
+              {group.items.map((v) => (
+                <button
+                  key={v}
+                  className={view === v ? "active" : ""}
+                  aria-current={view === v ? "page" : undefined}
+                  onClick={() => {
+                    setView(v);
+                    setQuery("");
+                  }}
+                >
+                  <span aria-hidden="true">
                     {
-                      Acasă: "◫",
-                      Întreprindere: "▣",
-                      Vânzări: "↗",
-                      Rapoarte: "▥",
-                      Contabilitate: "≋",
-                      Setări: "⚙",
-                    } as Record<string, string>
-                  )[v]
-                }
-              </span>
-              {v}
-            </button>
+                      (
+                        {
+                          Acasă: "◫",
+                          Vânzări: "↗",
+                          Contabilitate: "≋",
+                          Rapoarte: "▥",
+                          Întreprindere: "▣",
+                          Setări: "⚙",
+                        } as Record<string, string>
+                      )[v]
+                    }
+                  </span>
+                  {v}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="asidebottom">
           <span className="pill">
             {native ? "DESKTOP" : "WEB"} · {packageInfo.version}
           </span>
-          <p>
-            O afacere în echilibru
-            <br />
-            începe cu ordine.
-          </p>
+
           <button className="textbutton" onClick={logout}>
             Deconectare ↗
           </button>
@@ -449,16 +457,28 @@ export default function Page() {
                   ? "SOCOT ATELIER SRL · DEMONSTRAȚIE"
                   : "SPAȚIUL TĂU FINANCIAR"}
               </p>
-              <h1>
-                {view === "Acasă" ? "Afacerea ta, dintr-o privire." : view}
-              </h1>
+              <h1>{view === "Acasă" ? "Privire de ansamblu" : view}</h1>
               <p className="muted">
-                {view === "Acasă"
-                  ? "Mai puține întrebări. O imagine mai clară a banilor tăi."
-                  : "Documente simple. Informații la zi."}
+                {
+                  (
+                    {
+                      Acasă:
+                        "Solduri, documente recente și lucrurile de rezolvat.",
+                      Vânzări:
+                        "Facturi, clienți și încasări într-un singur registru.",
+                      Rapoarte:
+                        "Alege raportul, perioada și nivelul de detaliu.",
+                      Contabilitate:
+                        "Verifică articolele, regulile și perioadele contabile.",
+                      Întreprindere:
+                        "Datele firmei, politica contabilă și planul de conturi.",
+                      Setări: "Conexiune, stocare locală și actualizări.",
+                    } as Record<string, string>
+                  )[view]
+                }
               </p>
             </div>
-            {writable && (
+            {writable && ["Acasă", "Vânzări"].includes(view) && (
               <button onClick={() => setForm(true)}>＋ Factură nouă</button>
             )}
           </div>
@@ -545,184 +565,223 @@ export default function Page() {
               </button>
             </section>
           )}
-          {view !== "Setări" &&
-            view !== "Contabilitate" &&
-            view !== "Întreprindere" && (
-              <>
-                <section className="metrics">
-                  {[
-                    ["Vânzări înregistrate", sum.sales, "↗"],
-                    ["Încasări", sum.paid, "↓"],
-                    ["De încasat", sum.due, "◷"],
-                  ].map(([label, value, icon]) => (
-                    <article key={label}>
-                      <div>
-                        {label}
-                        <span>{icon}</span>
-                      </div>
-                      <strong>{money(Number(value))}</strong>
-                      <small>Din documentele salvate · MDL</small>
-                    </article>
-                  ))}
-                </section>
-                {view === "Acasă" && (
-                  <section className="overview">
+          {view === "Rapoarte" && (
+            <div className="report-switch" role="group" aria-label="Tip raport">
+              {[
+                "Creanțe",
+                ...(demo || can(session.role, "journal.read")
+                  ? ["Balanță și conturi"]
+                  : []),
+              ].map((t) => (
+                <button
+                  key={t}
+                  aria-pressed={reportView === t}
+                  className={reportView === t ? "selected" : ""}
+                  onClick={() => setReportView(t)}
+                >
+                  <strong>{t}</strong>
+                  <small>
+                    {t === "Creanțe"
+                      ? "Facturi și sume de încasat"
+                      : "Solduri, rulaje și documente sursă"}
+                  </small>
+                </button>
+              ))}
+            </div>
+          )}
+          {(view === "Acasă" ||
+            view === "Vânzări" ||
+            (view === "Rapoarte" && reportView === "Creanțe")) && (
+            <>
+              <section className="metrics">
+                {[
+                  ["Vânzări înregistrate", sum.sales, "↗"],
+                  ["Încasări", sum.paid, "↓"],
+                  ["De încasat", sum.due, "◷"],
+                ].map(([label, value, icon]) => (
+                  <article key={label}>
                     <div>
-                      <p className="eyebrow">DE LA FACTURĂ LA ÎNCASARE</p>
-                      <h2>Banii tăi au o direcție.</h2>
-                      <p className="muted">
-                        Urmărește partea încasată din vânzările înregistrate.
-                      </p>
-                      <div className="progress">
-                        <i
-                          style={{
-                            width: `${sum.sales ? (sum.paid / sum.sales) * 100 : 0}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="legend">
-                        <span>
-                          ● Încasat{" "}
-                          {sum.sales
-                            ? Math.round((sum.paid / sum.sales) * 100)
-                            : 0}
-                          %
-                        </span>
-                        <span>○ Rămas de încasat</span>
-                      </div>
+                      {label}
+                      <span>{icon}</span>
                     </div>
-                    <div className="tip">
-                      <span>UN PAS ÎNAINTE</span>
-                      <h3>
-                        {state.invoices.length
-                          ? "Continuă cu o încasare."
-                          : "Prima factură, primul pas."}
-                      </h3>
-                      <p>
-                        {state.invoices.length
-                          ? "Înregistrează plățile primite și vezi cum se actualizează creanțele."
-                          : "Creează o factură demonstrativă. Toate sumele de aici provin din documentele tale."}
-                      </p>
-                    </div>
-                  </section>
-                )}
-                <section className="panel">
-                  <div className="panelhead">
-                    <div>
-                      <h2>
-                        {view === "Rapoarte"
-                          ? "Situația creanțelor"
-                          : "Facturi de vânzare"}
-                      </h2>
-                      <p className="muted">
-                        {state.invoices.length} documente ·{" "}
-                        {demo
-                          ? "Socot demonstrativ"
-                          : "ultimele 200 de documente"}
-                      </p>
-                    </div>
-                    <div className="controls">
-                      <input
-                        aria-label="Caută client"
-                        placeholder="Caută un client…"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                      />
-                      <button className="secondary" onClick={exportCsv}>
-                        Export CSV ↗
-                      </button>
+                    <strong>{money(Number(value))}</strong>
+                    <small>Din documentele salvate · MDL</small>
+                  </article>
+                ))}
+              </section>
+              {view === "Acasă" && (
+                <section className="work-start">
+                  <div>
+                    <p className="eyebrow">CONTINUĂ LUCRUL</p>
+                    <h2>Ce vrei să faci?</h2>
+                    <p className="muted">
+                      Acces direct la documente și verificări.
+                    </p>
+                  </div>
+                  <div className="quick-actions">
+                    <button
+                      className="secondary"
+                      onClick={() => setView("Vânzări")}
+                    >
+                      <strong>Facturi și încasări ↗</strong>
+                      <small>
+                        {state.invoices.filter((i) => i.paid < i.total).length}{" "}
+                        facturi cu sold deschis
+                      </small>
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        setView("Rapoarte");
+                        setReportView("Creanțe");
+                      }}
+                    >
+                      <strong>Vezi rapoartele ↗</strong>
+                      <small>Creanțe și situația conturilor</small>
+                    </button>
+                    {(demo || can(session.role, "journal.read")) && (
                       <button
                         className="secondary"
-                        onClick={() =>
-                          action(async () => {
-                            if (native) {
-                              const { invoke } =
-                                await import("@tauri-apps/api/core");
-                              await invoke("print_document");
-                            } else window.print();
-                          })
-                        }
+                        onClick={() => setView("Contabilitate")}
                       >
-                        Imprimă / PDF
+                        <strong>Verifică jurnalul ↗</strong>
+                        <small>Articole, perioade și audit</small>
                       </button>
-                    </div>
+                    )}
                   </div>
-                  <div className="tablewrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>DOCUMENT / CLIENT</th>
-                          <th>DATA</th>
-                          <th>TOTAL</th>
-                          <th>DE ÎNCASAT</th>
-                          <th>STARE</th>
-                          <th />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {state.invoices
-                          .filter((i) =>
-                            i.customer
-                              .toLowerCase()
-                              .includes(query.toLowerCase()),
-                          )
-                          .map((i) => (
-                            <tr key={i.id}>
-                              <td>
-                                <strong>{i.customer}</strong>
-                                <small>
-                                  Socot · {i.id.slice(0, 8).toUpperCase()}
-                                </small>
-                              </td>
-                              <td>{i.date}</td>
-                              <td>{money(i.total)}</td>
-                              <td>{money(i.total - i.paid)}</td>
-                              <td>
-                                <span
-                                  className={`badge ${i.paid === i.total ? "paid" : ""}`}
-                                >
-                                  {i.paid === i.total
-                                    ? "Achitată"
-                                    : i.paid
-                                      ? "Parțial achitată"
-                                      : "Emisă"}
-                                </span>
-                              </td>
-                              <td>
-                                {writable && i.paid < i.total && (
-                                  <button
-                                    className="textbutton"
-                                    disabled={
-                                      busy ||
-                                      state.pending.some(
-                                        (p) => p.invoice.id === i.id,
-                                      )
-                                    }
-                                    onClick={() => setPayment(i)}
-                                  >
-                                    Încasează ↗
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {!state.invoices.length && (
-                    <div className="empty">
-                      <span>▤</span>
-                      <h3>Aici începe ordinea.</h3>
-                      <p>
-                        Adaugă prima factură pentru a vedea vânzările și
-                        creanțele.
-                      </p>
-                    </div>
-                  )}
                 </section>
-              </>
-            )}
+              )}
+              <section className="panel">
+                <div className="panelhead">
+                  <div>
+                    <h2>
+                      {view === "Rapoarte"
+                        ? "Situația creanțelor"
+                        : view === "Acasă"
+                          ? "Documente recente"
+                          : "Facturi de vânzare"}
+                    </h2>
+                    <p className="muted">
+                      {state.invoices.length} documente ·{" "}
+                      {demo
+                        ? "Socot demonstrativ"
+                        : "ultimele 200 de documente"}
+                    </p>
+                  </div>
+                  <div className="controls">
+                    <input
+                      aria-label="Caută client"
+                      placeholder="Caută un client…"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                    <button className="secondary" onClick={exportCsv}>
+                      Export CSV ↗
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        action(async () => {
+                          if (native) {
+                            const { invoke } =
+                              await import("@tauri-apps/api/core");
+                            await invoke("print_document");
+                          } else window.print();
+                        })
+                      }
+                    >
+                      Imprimă / PDF
+                    </button>
+                  </div>
+                </div>
+                <div className="tablewrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>DOCUMENT / CLIENT</th>
+                        <th>DATA</th>
+                        <th>TOTAL</th>
+                        <th>DE ÎNCASAT</th>
+                        <th>STARE</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {state.invoices
+                        .filter((i) =>
+                          i.customer
+                            .toLowerCase()
+                            .includes(query.toLowerCase()),
+                        )
+                        .slice()
+                        .sort((a, b) => b.date.localeCompare(a.date))
+                        .slice(0, view === "Acasă" ? 5 : undefined)
+                        .map((i) => (
+                          <tr key={i.id}>
+                            <td>
+                              <strong>{i.customer}</strong>
+                              <small>
+                                Socot · {i.id.slice(0, 8).toUpperCase()}
+                              </small>
+                            </td>
+                            <td>{i.date}</td>
+                            <td>{money(i.total)}</td>
+                            <td>{money(i.total - i.paid)}</td>
+                            <td>
+                              <span
+                                className={`badge ${i.paid === i.total ? "paid" : ""}`}
+                              >
+                                {i.paid === i.total
+                                  ? "Achitată"
+                                  : i.paid
+                                    ? "Parțial achitată"
+                                    : "Emisă"}
+                              </span>
+                            </td>
+                            <td>
+                              {writable && i.paid < i.total && (
+                                <button
+                                  className="textbutton"
+                                  disabled={
+                                    busy ||
+                                    state.pending.some(
+                                      (p) => p.invoice.id === i.id,
+                                    )
+                                  }
+                                  onClick={() => setPayment(i)}
+                                >
+                                  Încasează ↗
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+                {view === "Acasă" && state.invoices.length > 5 && (
+                  <button
+                    className="textbutton"
+                    onClick={() => setView("Vânzări")}
+                  >
+                    Vezi toate cele {state.invoices.length} documente →
+                  </button>
+                )}
+                {!state.invoices.length && (
+                  <div className="empty">
+                    <span>▤</span>
+                    <h3>Aici începe ordinea.</h3>
+                    <p>
+                      Adaugă prima factură pentru a vedea vânzările și
+                      creanțele.
+                    </p>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
           {view === "Rapoarte" &&
+            reportView === "Balanță și conturi" &&
             (demo || can(session.role, "journal.read")) && (
               <LedgerPanel demo={demo} snapshot={state} />
             )}

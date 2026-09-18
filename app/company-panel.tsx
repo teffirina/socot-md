@@ -197,18 +197,47 @@ export default function CompanyPanel({
             disabled={!manage || busy}
             style={{ border: 0, padding: 0 }}
           >
+            {[
+              {
+                title: "1. Identitatea firmei",
+                keys: ["name", "shortName", "legalForm", "idno", "vatCode"],
+              },
+              {
+                title: "2. Adrese și contact",
+                keys: ["legalAddress", "businessAddress", "phone", "email"],
+              },
+              { title: "3. Date bancare", keys: ["iban", "bank", "bic"] },
+              {
+                title: "4. Responsabili și regim fiscal",
+                keys: [
+                  "director",
+                  "chiefAccountant",
+                  "taxRegime",
+                  "reportingPeriod",
+                ],
+              },
+            ].map((group) => (
+              <section className="form-section" key={group.title}>
+                <h3>{group.title}</h3>
+                <div className="formgrid">
+                  {fields
+                    .filter(([key]) => group.keys.includes(key))
+                    .map(([key, label]) => (
+                      <label key={key}>
+                        {label}
+                        <input
+                          name={key}
+                          defaultValue={String(data[key])}
+                          required={["name", "shortName"].includes(key)}
+                          maxLength={250}
+                        />
+                      </label>
+                    ))}
+                </div>
+              </section>
+            ))}
+            <h3>5. Politică și confirmare</h3>
             <div className="formgrid">
-              {fields.map(([key, label]) => (
-                <label key={key}>
-                  {label}
-                  <input
-                    name={key}
-                    defaultValue={String(data[key])}
-                    required={["name", "shortName"].includes(key)}
-                    maxLength={250}
-                  />
-                </label>
-              ))}
               <label>
                 Moneda funcțională
                 <select name="currency" defaultValue={data.currency}>

@@ -274,15 +274,17 @@ export default function CompliancePanel({
         <p>Se încarcă configurația…</p>
       ) : (
         <>
-          <label>
-            Motivul aprobării sau al modificării
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Ce ai verificat și de ce aprobi această operațiune?"
-              maxLength={500}
-            />
-          </label>
+          {["Reguli", "Perioade", "Jurnal"].includes(tab) && (
+            <label>
+              Motivul aprobării sau al modificării
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Ce ai verificat și de ce aprobi această operațiune?"
+                maxLength={500}
+              />
+            </label>
+          )}
           {tab === "Reguli" && (
             <>
               <div className="rulelist">
