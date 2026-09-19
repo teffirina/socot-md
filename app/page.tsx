@@ -471,7 +471,7 @@ export default function Page() {
                       Contabilitate:
                         "Verifică articolele, regulile și perioadele contabile.",
                       Întreprindere:
-                        "Datele firmei, politica contabilă și planul de conturi.",
+                        "Datele firmei, contactele și politica contabilă.",
                       Setări: "Conexiune, stocare locală și actualizări.",
                     } as Record<string, string>
                   )[view]
