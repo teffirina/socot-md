@@ -44,10 +44,18 @@ Sarcina extinsă nu este finalizată. Logurile și instalatoarele locale se găs
 
 24 teste unitare/sincronizare au trecut, inclusiv sold inițial/rulaje/sold final, limite de perioadă, excluderea propunerilor și refuzul sumelor invalide. TypeScript și exportul web au trecut. API PostgreSQL: balanța după încasare parțială, acces refuzat operatorului, acces la sursă și izolare față de auditorul altei companii au trecut. UI web: balanță → cont 221 → document sursă verificat efectiv. Datele demo vechi fără metadate contabile sunt excluse explicit, nu postate automat.
 
-Instalatoarele 0.2.0 nu includ rapoartele noi. Buildurile desktop pentru aceste modificări nu sunt încă declarate verificate. Analiza celor opt capturi se află în REFERINTE-1C.md.
+Instalatoarele 0.2.0 nu includ rapoartele noi. Buildurile desktop au fost ulterior verificate în rulările menționate mai jos. Analiza celor opt capturi se află în REFERINTE-1C.md.
 
 ## Reorganizarea interfeței 0.3
 
 Commit `29fbb1b`: navigare grupată, ecran Acasă cu cinci documente recente, alegere distinctă Creanțe/Balanță, formular companie în cinci secțiuni și acțiuni contextuale. TypeScript și export web reușite. Verificare vizuală în browser la dimensiunea normală și 620 px; revenire la dimensiunea inițială. Pornire nativă macOS 0.3.0 confirmată, cu trei documente locale existente păstrate. DMG-ul local, semnătura ad-hoc și semnătura updater au trecut verificările; un payload alterat a fost respins.
 
-Buildul anterior, numai cu rapoarte (`a060cb6`), a trecut pe Windows și macOS în Actions 35344477065. Rezultatul pentru interfața reorganizată este urmărit separat în Actions 35344988074; succesul buildului anterior nu este prezentat drept verificare a commitului nou.
+Buildul anterior, numai cu rapoarte (`a060cb6`), a trecut pe Windows și macOS în Actions 35344477065. Interfața reorganizată a trecut separat în Actions 35344988074 pe Windows și macOS.
+
+## Eliminarea ecranului Plan de conturi — 19 septembrie 2026
+
+Commit `188d1e2`: ecranul, formularul și încărcarea conturilor eliminate din Întreprindere, fără ștergerea datelor contabile. TypeScript/export web reușite. Confirmare vizuală web și macOS: formularul firmei este prezent, Plan de conturi absent. Cele trei documente SQLite existente și totalul 29.223,05 MDL au rămas intacte. Pornirea macOS a avut un timeout al instrumentului de accesibilitate; verificarea următoare a confirmat încărcarea și navigarea funcțională.
+
+DMG local verificat cu hdiutil; semnătura ad-hoc validă; semnătura updater validă și pachet modificat respins. Lipsa notarizării Apple rămâne un avertisment real.
+
+Actions [35425578844](https://github.com/teffirina/socot-md/actions/runs/35425578844) a încheiat cu succes pentru `188d1e2`: API/PostgreSQL, macOS și Windows. EXE instalat silențios și proces pornit 12 secunde; MSI extras administrativ și Socot.exe identificat. Semnăturile updater verificate criptografic, inclusiv respingerea pachetelor alterate. Avertismente CI: acțiunile v4 folosesc un runtime Node 20 depreciat, rulat de platformă pe Node 24; migrarea viitoare ubuntu-latest a fost anunțată. Aceste avertismente nu au făcut buildurile să eșueze.
