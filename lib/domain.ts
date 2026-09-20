@@ -3,6 +3,8 @@ import { z } from "zod";
 export const invoiceSchema = z
   .object({
     id: z.uuid(),
+    kind: z.enum(["sale", "expense"]).optional(),
+    category: z.string().trim().max(80).optional(),
     customer: z.string().trim().min(2).max(120),
     total: z.number().int().positive().max(100_000_000),
     paid: z.number().int().nonnegative(),
@@ -32,7 +34,9 @@ export function applyOperation(
     throw new Error("Factura nouă trebuie emisă fără plată");
   if (
     current &&
-    (current.total !== operation.invoice.total ||
+    ((current.kind ?? "sale") !== (operation.invoice.kind ?? "sale") ||
+      (current.category ?? "") !== (operation.invoice.category ?? "") ||
+      current.total !== operation.invoice.total ||
       current.customer !== operation.invoice.customer ||
       current.date !== operation.invoice.date ||
       current.paid > operation.invoice.paid)
@@ -59,11 +63,21 @@ export function journal(
 ) {
   const rule = selectRule(
     rules,
-    previous ? "receipt" : "sale",
+    operationKind(next, !!previous),
     date,
     allowDemo,
   );
   const amount = previous ? next.paid - previous.paid : next.total;
   if (amount <= 0) throw new Error("Încasarea trebuie să fie pozitivă.");
   return { debit: rule.debit, credit: rule.credit, amount };
+}
+
+export function operationKind(doc: Invoice, payment: boolean) {
+  return doc.kind === "expense"
+    ? payment
+      ? "payment"
+      : "expense"
+    : payment
+      ? "receipt"
+      : "sale";
 }

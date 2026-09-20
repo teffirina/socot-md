@@ -11,7 +11,12 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { randomBytes, createHash } from "node:crypto";
 import { z } from "zod";
-import { operationSchema, applyOperation, journal } from "../lib/domain";
+import {
+  operationSchema,
+  applyOperation,
+  journal,
+  operationKind,
+} from "../lib/domain";
 const db = new PrismaClient();
 const app = express();
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -124,6 +129,8 @@ app.get("/api/invoices", async (_req, res) =>
       select: {
         id: true,
         customer: true,
+        kind: true,
+        category: true,
         total: true,
         paid: true,
         version: true,
@@ -174,7 +181,7 @@ app.post("/api/operations", async (req, res) => {
       const allowDemo = user.companyId === "socot-demo";
       const rule = selectRule(
         rules,
-        current ? "receipt" : "sale",
+        operationKind(op.invoice, !!current),
         effectiveDate,
         allowDemo,
       );
@@ -233,6 +240,8 @@ app.post("/api/operations", async (req, res) => {
           ? {
               id: c.id,
               customer: c.customer,
+              kind: c.kind,
+              category: c.category,
               total: c.total,
               paid: c.paid,
               date: c.date,

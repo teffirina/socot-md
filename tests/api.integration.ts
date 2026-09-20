@@ -307,8 +307,75 @@ async function run() {
       data: { debit: "333" },
     }),
   );
+  const expense = {
+    ...invoice,
+    id: crypto.randomUUID(),
+    kind: "expense",
+    category: "Chirie",
+    date: "2026-10-04",
+    total: 150000,
+  };
+  const expenseOp = {
+    id: crypto.randomUUID(),
+    invoice: expense,
+    baseVersion: 0,
+  };
+  const createdExpense = await request("/operations", expenseOp, a.data.token);
+  assert.equal(createdExpense.status, 200, JSON.stringify(createdExpense.data));
+  assert.equal(
+    (await request("/operations", expenseOp, a.data.token)).status,
+    200,
+  );
+  assert.equal(await db.journal.count({ where: { invoiceId: expense.id } }), 1);
+  assert.equal(
+    (await db.journal.findFirstOrThrow({ where: { invoiceId: expense.id } }))
+      .credit,
+    "521",
+  );
+  const expensePayment = {
+    id: crypto.randomUUID(),
+    invoice: { ...createdExpense.data, paid: 50000 },
+    baseVersion: 1,
+    effectiveDate: "2026-10-05",
+  };
+  assert.equal(
+    (await request("/operations", expensePayment, a.data.token)).status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(
+        "/operations",
+        { ...expensePayment, id: crypto.randomUUID() },
+        a.data.token,
+      )
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await request(
+        "/operations",
+        { ...expensePayment, id: crypto.randomUUID(), baseVersion: 2 },
+        b.data.token,
+      )
+    ).status,
+    403,
+  );
+  const visible = await request("/invoices", undefined, a.data.token);
+  assert.equal(
+    visible.data.find((i: any) => i.id === expense.id).kind,
+    "expense",
+  );
+  assert.equal(
+    (await request("/invoices", undefined, b.data.token)).data.some(
+      (i: any) => i.id === expense.id,
+    ),
+    false,
+  );
   const report = await request("/reports", {}, accountant.data.token);
   assert.equal(report.data.status, "generated");
+  assert.equal(report.data.sourceIds.includes(expense.id), false);
   const exported = await request(
     "/reports/export",
     { id: report.data.id },

@@ -188,13 +188,17 @@ export default function CompliancePanel({
           id: crypto.randomUUID(),
           createdAt: new Date().toISOString(),
           status: "generated",
-          sourceIds: snapshot.invoices.map((i) => i.id),
-          rows: snapshot.invoices.map(({ id, customer, total, paid }) => ({
-            id,
-            customer,
-            total,
-            paid,
-          })),
+          sourceIds: snapshot.invoices
+            .filter((i) => i.kind !== "expense")
+            .map((i) => i.id),
+          rows: snapshot.invoices
+            .filter((i) => i.kind !== "expense")
+            .map(({ id, customer, total, paid }) => ({
+              id,
+              customer,
+              total,
+              paid,
+            })),
         };
         await local("report.generated", report.id, {
           ...data!,
@@ -293,8 +297,15 @@ export default function CompliancePanel({
                     <strong>{r.name}</strong>
                     <p>
                       v{r.version} ·{" "}
-                      {r.kind === "sale" ? "Vânzare" : "Încasare"} · D {r.debit}{" "}
-                      / C {r.credit}
+                      {
+                        {
+                          sale: "Vânzare",
+                          receipt: "Încasare",
+                          expense: "Cheltuială",
+                          payment: "Plată furnizor",
+                        }[r.kind]
+                      }{" "}
+                      · D {r.debit} / C {r.credit}
                     </p>
                     <small>
                       {r.validFrom} — {r.validTo ?? "până la înlocuire"} ·{" "}
@@ -334,6 +345,8 @@ export default function CompliancePanel({
                         <select name="kind">
                           <option value="sale">Vânzare</option>
                           <option value="receipt">Încasare</option>
+                          <option value="expense">Cheltuială</option>
+                          <option value="payment">Plată furnizor</option>
                         </select>
                       </label>
                       <label>

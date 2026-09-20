@@ -26,5 +26,33 @@
     "source": "Model Socot pentru demonstrație; necesită validare contabilă",
     "approvedBy": "Socot demonstrativ",
     "demo": true
+  },
+  {
+    "id": "demo-expense-v1",
+    "kind": "expense",
+    "version": 1,
+    "name": "Cheltuială fără TVA — model",
+    "debit": "713",
+    "credit": "521",
+    "validFrom": "2000-01-01",
+    "validTo": null,
+    "status": "approved",
+    "source": "Model Socot pentru demonstrație; necesită validare contabilă",
+    "approvedBy": "Socot demonstrativ",
+    "demo": true
+  },
+  {
+    "id": "demo-payment-v1",
+    "kind": "payment",
+    "version": 1,
+    "name": "Plată furnizor prin bancă — model",
+    "debit": "521",
+    "credit": "242",
+    "validFrom": "2000-01-01",
+    "validTo": null,
+    "status": "approved",
+    "source": "Model Socot pentru demonstrație; necesită validare contabilă",
+    "approvedBy": "Socot demonstrativ",
+    "demo": true
   }
 ]

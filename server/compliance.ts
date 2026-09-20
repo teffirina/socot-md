@@ -263,7 +263,7 @@ export function complianceRouter(db: PrismaClient) {
   router.post("/reports", async (_req, res) => {
     const user = res.locals.user;
     const invoices = await db.invoice.findMany({
-      where: { companyId: user.companyId },
+      where: { companyId: user.companyId, kind: "sale" },
       select: { id: true, customer: true, total: true, paid: true },
     });
     const report = await db.regulatoryReport.create({

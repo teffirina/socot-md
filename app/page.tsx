@@ -1,5 +1,6 @@
 "use client";
 import packageInfo from "../package.json";
+import ExpensesPanel from "./expenses-panel";
 import CompanyPanel from "./company-panel";
 import { can } from "../lib/permissions";
 import LedgerPanel from "./ledger-panel";
@@ -34,7 +35,8 @@ export default function Page() {
     [ready, setReady] = useState(false),
     [blocked, setBlocked] = useState(false);
   const engine = useRef<SyncEngine | null>(null);
-  const sum = totals(state.invoices);
+  const sales = state.invoices.filter((i) => i.kind !== "expense");
+  const sum = totals(sales);
   const writable = demo || can(session?.role, "invoice.write");
   async function start(
     user: { id: string; companyId: string; role: string },
@@ -207,7 +209,7 @@ export default function Page() {
   function exportCsv() {
     const rows = [
       ["Socot", "Client", "Data", "Total MDL", "Încasat MDL"],
-      ...state.invoices.map((i) => [
+      ...sales.map((i) => [
         i.id,
         i.customer,
         i.date,
@@ -376,7 +378,7 @@ export default function Page() {
         </div>
         <nav aria-label="Navigare principală">
           {[
-            { label: "ACTIVITATE", items: ["Acasă", "Vânzări"] },
+            { label: "ACTIVITATE", items: ["Acasă", "Vânzări", "Cheltuieli"] },
             {
               label: "CONTABILITATE",
               items: [
@@ -406,6 +408,7 @@ export default function Page() {
                         {
                           Acasă: "◫",
                           Vânzări: "↗",
+                          Cheltuieli: "↙",
                           Contabilitate: "≋",
                           Rapoarte: "▥",
                           Întreprindere: "▣",
@@ -466,6 +469,7 @@ export default function Page() {
                         "Solduri, documente recente și lucrurile de rezolvat.",
                       Vânzări:
                         "Facturi, clienți și încasări într-un singur registru.",
+                      Cheltuieli: "Furnizori, cheltuieli și sume de plată.",
                       Rapoarte:
                         "Alege raportul, perioada și nivelul de detaliu.",
                       Contabilitate:
@@ -532,7 +536,7 @@ export default function Page() {
                   {p.conflict !== undefined && (
                     <>
                       <p>
-                        Conflict: încasat local {money(p.invoice.paid)} / server{" "}
+                        Conflict: achitat local {money(p.invoice.paid)} / server{" "}
                         {money(p.conflict?.paid ?? 0)}. Alege explicit
                         versiunea.
                       </p>
@@ -625,8 +629,8 @@ export default function Page() {
                     >
                       <strong>Facturi și încasări ↗</strong>
                       <small>
-                        {state.invoices.filter((i) => i.paid < i.total).length}{" "}
-                        facturi cu sold deschis
+                        {sales.filter((i) => i.paid < i.total).length} facturi
+                        cu sold deschis
                       </small>
                     </button>
                     <button
@@ -662,7 +666,7 @@ export default function Page() {
                           : "Facturi de vânzare"}
                     </h2>
                     <p className="muted">
-                      {state.invoices.length} documente ·{" "}
+                      {sales.length} documente ·{" "}
                       {demo
                         ? "Socot demonstrativ"
                         : "ultimele 200 de documente"}
@@ -707,7 +711,7 @@ export default function Page() {
                       </tr>
                     </thead>
                     <tbody>
-                      {state.invoices
+                      {sales
                         .filter((i) =>
                           i.customer
                             .toLowerCase()
@@ -759,15 +763,15 @@ export default function Page() {
                     </tbody>
                   </table>
                 </div>
-                {view === "Acasă" && state.invoices.length > 5 && (
+                {view === "Acasă" && sales.length > 5 && (
                   <button
                     className="textbutton"
                     onClick={() => setView("Vânzări")}
                   >
-                    Vezi toate cele {state.invoices.length} documente →
+                    Vezi toate cele {sales.length} documente →
                   </button>
                 )}
-                {!state.invoices.length && (
+                {!sales.length && (
                   <div className="empty">
                     <span>▤</span>
                     <h3>Aici începe ordinea.</h3>
@@ -785,6 +789,13 @@ export default function Page() {
             (demo || can(session.role, "journal.read")) && (
               <LedgerPanel demo={demo} snapshot={state} />
             )}
+          {view === "Cheltuieli" && (
+            <ExpensesPanel
+              snapshot={state}
+              engine={engine.current!}
+              writable={writable}
+            />
+          )}
           {view === "Întreprindere" && (
             <CompanyPanel
               demo={demo}

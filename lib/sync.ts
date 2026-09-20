@@ -1,12 +1,19 @@
 import {
   initialCompliance,
+  demoRules,
   assertPeriodOpen,
   selectRule,
   type ComplianceState,
 } from "./compliance";
 import { demoData } from "./demo";
 import { api, ApiError } from "./api";
-import { applyOperation, journal, type Invoice, type Pending } from "./domain";
+import {
+  applyOperation,
+  journal,
+  operationKind,
+  type Invoice,
+  type Pending,
+} from "./domain";
 import { read, write, type Snapshot } from "./storage";
 export class SyncEngine {
   state: Snapshot = { invoices: [], pending: [] };
@@ -23,6 +30,17 @@ export class SyncEngine {
       saved ?? (this.demo ? demoData() : { invoices: [], pending: [] });
     if (this.demo && !this.state.compliance)
       this.state.compliance = initialCompliance();
+    if (this.demo && this.state.compliance) {
+      const existing = this.state.compliance.rules;
+      this.state.compliance.rules = [
+        ...existing,
+        ...demoRules.filter(
+          (r) =>
+            ["expense", "payment"].includes(r.kind) &&
+            !existing.some((x) => x.kind === r.kind),
+        ),
+      ];
+    }
     if (!saved && this.demo) await this.deps.write(this.scope, this.state);
     this.changed(this.state, this.demo ? "Demo local • SQLite" : "Conectare…");
   }
@@ -44,7 +62,10 @@ export class SyncEngine {
     const op: Pending = {
       id: crypto.randomUUID(),
       baseVersion: invoice.version,
-      effectiveDate: new Date().toISOString().slice(0, 10),
+      effectiveDate:
+        invoice.version === 0
+          ? invoice.date
+          : new Date().toISOString().slice(0, 10),
       invoice,
     };
     if (this.demo) {
@@ -53,7 +74,7 @@ export class SyncEngine {
       assertPeriodOpen(compliance.periods, op.effectiveDate!);
       const rule = selectRule(
         compliance.rules,
-        old ? "receipt" : "sale",
+        operationKind(invoice, !!old),
         op.effectiveDate!,
         true,
       );
@@ -65,7 +86,7 @@ export class SyncEngine {
           audit: [
             {
               id: crypto.randomUUID(),
-              action: old ? "receipt.created" : "invoice.created",
+              action: `${operationKind(invoice, !!old)}.created`,
               objectId: invoice.id,
               reason: old
                 ? "Încasare confirmată de utilizator"
@@ -157,6 +178,7 @@ export class SyncEngine {
             effectiveDate: op.effectiveDate,
           });
           await this.commit({
+            ...this.state,
             invoices: [
               ...this.state.invoices.filter((i) => i.id !== next.id),
               next,
@@ -187,6 +209,7 @@ export class SyncEngine {
       }
       const invoices: Invoice[] = await this.deps.api("/invoices");
       await this.commit({
+        ...this.state,
         invoices: invoices.slice(-200),
         pending: this.state.pending,
       });

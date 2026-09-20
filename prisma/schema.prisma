@@ -19,7 +19,13 @@ model Session {
  user User @relation(fields:[userId],references:[id])
  expiresAt DateTime
 }
+enum DocumentKind {
+ sale
+ expense
+}
 model Invoice {
+ kind DocumentKind @default(sale)
+ category String @default("")
  id String @id
  companyId String
  customer String

@@ -3,7 +3,7 @@ import initialRules from "../config/demo-rules.json";
 export const ruleSchema = z
   .object({
     id: z.string().min(1).max(80),
-    kind: z.enum(["sale", "receipt"]),
+    kind: z.enum(["sale", "receipt", "expense", "payment"]),
     version: z.number().int().positive(),
     name: z.string().trim().min(3).max(150),
     debit: z.string().regex(/^\d{3,8}$/),
