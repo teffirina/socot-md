@@ -12,7 +12,9 @@ struct Store(Mutex<Connection>);
 fn credential(name: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new("md.socot.desktop", name).map_err(|e| e.to_string())
 }
+static KEY_ACCESS: Mutex<()> = Mutex::new(());
 fn key() -> Result<Vec<u8>, String> {
+    let _guard = KEY_ACCESS.lock().map_err(|e| e.to_string())?;
     let e = credential("local-encryption-key")?;
     match e.get_password() {
         Ok(v) => STANDARD.decode(v).map_err(|e| e.to_string()),
@@ -64,7 +66,9 @@ fn scoped(scope: &str) -> String {
     }
 }
 #[tauri::command]
-fn local_read(store: tauri::State<Store>, scope: String) -> Result<Option<String>, String> {
+async fn local_read(app: tauri::AppHandle, scope: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+    let store = app.state::<Store>();
     let scope = scoped(&scope);
     let db = store.0.lock().map_err(|e| e.to_string())?;
     let data: Option<Vec<u8>> = db
@@ -76,9 +80,12 @@ fn local_read(store: tauri::State<Store>, scope: String) -> Result<Option<String
         .optional()
         .map_err(|e| e.to_string())?;
     data.map(|d| decrypt(&d)).transpose()
+    }).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
-fn local_write(store: tauri::State<Store>, scope: String, payload: String) -> Result<(), String> {
+async fn local_write(app: tauri::AppHandle, scope: String, payload: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+    let store = app.state::<Store>();
     if payload.len() > 5_000_000 {
         return Err("Limita de stocare locală a fost atinsă".into());
     }
@@ -86,6 +93,7 @@ fn local_write(store: tauri::State<Store>, scope: String, payload: String) -> Re
     let data = encrypt(&payload)?;
     store.0.lock().map_err(|e|e.to_string())?.execute("INSERT INTO local_state(scope,payload) VALUES(?1,?2) ON CONFLICT(scope) DO UPDATE SET payload=excluded.payload",params![scope,data]).map_err(|e|e.to_string())?;
     Ok(())
+    }).await.map_err(|e| e.to_string())?
 }
 fn api_url() -> Result<String, String> {
     let url = option_env!("SOCOT_API_URL")

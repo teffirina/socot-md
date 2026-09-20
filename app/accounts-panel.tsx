@@ -128,7 +128,7 @@ export default function AccountsPanel({
             </tr>
           </thead>
           <tbody>
-            {accounts
+            {[...accounts]
               .sort((a, b) => a.code.localeCompare(b.code))
               .map((a) => (
                 <tr key={a.code}>
