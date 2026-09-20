@@ -59,3 +59,15 @@ Commit `188d1e2`: ecranul, formularul și încărcarea conturilor eliminate din 
 DMG local verificat cu hdiutil; semnătura ad-hoc validă; semnătura updater validă și pachet modificat respins. Lipsa notarizării Apple rămâne un avertisment real.
 
 Actions [35425578844](https://github.com/teffirina/socot-md/actions/runs/35425578844) a încheiat cu succes pentru `188d1e2`: API/PostgreSQL, macOS și Windows. EXE instalat silențios și proces pornit 12 secunde; MSI extras administrativ și Socot.exe identificat. Semnăturile updater verificate criptografic, inclusiv respingerea pachetelor alterate. Avertismente CI: acțiunile v4 folosesc un runtime Node 20 depreciat, rulat de platformă pe Node 24; migrarea viitoare ubuntu-latest a fost anunțată. Aceste avertismente nu au făcut buildurile să eșueze.
+
+## Cheltuieli — Socot 0.4.0
+
+Commit `cae691d`: 26 teste unitare/sincronizare trecute, TypeScript și export web reușite. Test nou: cheltuiala are articol distinct de vânzare, plata parțială reduce datoria, tipul documentului nu poate fi schimbat, conflictul de versiune și depășirea totalului sunt refuzate. Coada cheltuielilor supraviețuiește restartului și păstrează profilul la sincronizare.
+
+Verificare web efectivă: cheltuială demonstrativă 1.500 MDL, plată 500 MDL, sold 1.000 MDL, stare Parțial achitată, păstrate după reîncărcare; vânzările rămân 55.400 MDL. Noul document test rămâne în demo și este identificat explicit prin nume. API/PostgreSQL în Actions 35493089979: idempotency, plată parțială, conflict, drepturi, izolare între companii și excluderea cheltuielilor din raportul de creanțe au trecut.
+
+macOS local 0.4.0: pornire și navigare la Cheltuieli confirmate; cele trei facturi SQLite existente, total 29.223,05 MDL, păstrate. DMG verificat, semnătură ad-hoc validă, semnătură updater validă și pachet alterat respins. Fără notarizare Apple.
+
+Salvare SQLite suplimentară: documentul „Socot — test cheltuială SQLite”, 100 MDL, a fost păstrat după închiderea și repornirea aplicației. Repornirea a prezentat temporar o fereastră goală și erori AXError.cannotComplete ale instrumentului de accesibilitate; interfața s-a încărcat ulterior și documentul a fost confirmat. Cauza întârzierii nu este determinată; nu este prezentată ca pornire instantanee.
+
+Actions [35493089979](https://github.com/teffirina/socot-md/actions/runs/35493089979) a trecut integral pentru `cae691d`: API/PostgreSQL, Windows și macOS. Windows: instalare EXE NSIS, pornire 12 secunde și extragere MSI; macOS: DMG și bundle verificate. Semnăturile updater și respingerea pachetelor alterate au trecut pe ambele platforme. Avertismentele de runtime Actions, lipsa notarizării Apple/Authenticode și lipsa canalului public updater rămân valabile.
