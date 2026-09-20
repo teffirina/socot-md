@@ -22,3 +22,7 @@ Specificația inițială descrie o platformă mult mai mare. Produse, stocuri, T
 7. **Fundație tehnică:** reguli versionate și adaptoare care refuză explicit transmiterea fără integrare. Formulare oficiale, reguli fiscale validate și migrare 1C nu sunt implementate.
 
 Nu se adaugă butoane decorative pentru etapele neimplementate. Fiecare etapă trebuie verificată pe date demonstrative și API PostgreSQL înainte de a fi declarată finalizată. Cele opt capturi au fost furnizate și analizate ulterior în REFERINTE-1C.md. Identitatea vizuală Socot rămâne originală.
+
+## Specificația integrală din 20 septembrie 2026
+
+SPECIFICATIE-COMPLETA.md și ACCEPTARE-COMPLETA.md înlocuiesc lista inițială ca domeniu cerut: 212 cerințe individuale, plus fluxurile transversale. Nomenclatoarele comune și legăturile partener/contract sunt implementate în 0.5; nu echivalează cu fluxurile de stocuri, personal sau amortizare. Conturile sunt accesibile în Contabilitate → Conturi avansate conform cererii noi, fără readăugare în Întreprindere. Etapele următoare rămân: documente cu poziții și ciclu complet, postare atomică în registre, cumpărări/stocuri, bancă/casă, inventariere/active/producție, personal/salarii, închideri/rapoarte/atașamente. Nu se declară finalizată specificația integrală.

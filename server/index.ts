@@ -1,3 +1,5 @@
+import { validateDocumentReferences, catalogSchema } from "../lib/catalog";
+import { catalogRouter } from "./catalog";
 import { companyRouter } from "./company";
 import { can } from "../lib/permissions";
 import { complianceRouter } from "./compliance";
@@ -129,6 +131,8 @@ app.get("/api/invoices", async (_req, res) =>
       select: {
         id: true,
         customer: true,
+        partnerId: true,
+        contractId: true,
         kind: true,
         category: true,
         total: true,
@@ -139,6 +143,7 @@ app.get("/api/invoices", async (_req, res) =>
     }),
   ),
 );
+app.use("/api", catalogRouter(db));
 app.use("/api", companyRouter(db));
 app.use("/api", complianceRouter(db));
 app.post("/api/operations", async (req, res) => {
@@ -169,6 +174,22 @@ app.post("/api/operations", async (req, res) => {
       });
       if (current && current.companyId !== user.companyId)
         throw new Error("FORBIDDEN");
+      if (!current) {
+        const refs = await tx.catalogEntry.findMany({
+          where: {
+            companyId: user.companyId,
+            id: {
+              in: [op.invoice.partnerId, op.invoice.contractId].filter(
+                (v): v is string => !!v,
+              ),
+            },
+          },
+        });
+        validateDocumentReferences(
+          refs.map((r) => catalogSchema.parse(r.data)),
+          op.invoice,
+        );
+      }
       const effectiveDate = op.effectiveDate ?? op.invoice.date;
       const periods = await tx.accountingPeriod.findMany({
         where: { companyId: user.companyId },
@@ -240,6 +261,8 @@ app.post("/api/operations", async (req, res) => {
           ? {
               id: c.id,
               customer: c.customer,
+              partnerId: c.partnerId,
+              contractId: c.contractId,
               kind: c.kind,
               category: c.category,
               total: c.total,

@@ -28,6 +28,7 @@ function harness() {
     api: async (path: string, body?: any): Promise<any> => {
       if (!online) throw new Error("offline");
       if (path === "/health") return { ok: true };
+      if (path === "/catalog") return [];
       if (path === "/invoices") return saved ? [saved] : [];
       calls++;
       if (seen.has(body.id)) return seen.get(body.id);

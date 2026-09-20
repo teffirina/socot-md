@@ -1,8 +1,11 @@
+import type { CatalogEntry, CatalogPending } from "./catalog";
 import type { Company, Account } from "./company";
 import type { ComplianceState } from "./compliance";
 import type { Invoice, Pending } from "./domain";
 export type Snapshot = {
   invoices: Invoice[];
+  catalog?: CatalogEntry[];
+  catalogPending?: CatalogPending[];
   pending: Pending[];
   compliance?: ComplianceState;
   company?: Company;

@@ -67,6 +67,7 @@ test("cheltuială offline persistă după restart și sincronizare fără a pier
     api: async (path: string, body?: any): Promise<any> => {
       if (!online) throw Error("offline");
       if (path === "/health") return {};
+      if (path === "/catalog") return [];
       if (path === "/invoices") return [{ ...expense, version: 1 }];
       return { ...body.invoice, version: 1 };
     },

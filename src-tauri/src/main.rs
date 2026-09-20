@@ -103,6 +103,7 @@ fn api_url() -> Result<String, String> {
 async fn api_request(path: String, body: Option<Value>) -> Result<Value, String> {
     if ![
         "/login",
+        "/catalog",
         "/logout",
         "/me",
         "/invoices",

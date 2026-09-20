@@ -103,6 +103,79 @@ async function run() {
   assert.equal(a.status, 200);
   assert.equal(b.status, 200);
   assert.equal((await request("/invoices")).status, 401);
+  const catalogEntry = {
+    id: crypto.randomUUID(),
+    kind: "partner",
+    code: "TEST-CLIENT",
+    name: "Client din nomenclator",
+    active: true,
+    version: 0,
+    details: { role: "client" },
+  };
+  const catalogOp = {
+    id: crypto.randomUUID(),
+    entry: catalogEntry,
+    baseVersion: 0,
+    reason: "Configurare partener de test",
+  };
+  assert.equal(
+    (await request("/catalog", catalogOp, a.data.token)).status,
+    200,
+  );
+  assert.equal(
+    (await request("/catalog", catalogOp, a.data.token)).status,
+    200,
+  );
+  assert.equal(
+    await db.catalogEntry.count({ where: { id: catalogEntry.id } }),
+    1,
+  );
+  assert.equal(
+    (
+      await request(
+        "/catalog",
+        { ...catalogOp, id: crypto.randomUUID() },
+        a.data.token,
+      )
+    ).status,
+    409,
+  );
+  assert.equal(
+    (await request("/catalog", undefined, b.data.token)).data.length,
+    0,
+  );
+  assert.equal(
+    (await request("/catalog", catalogOp, b.data.token)).status,
+    403,
+  );
+  const other = await db.catalogEntry.create({
+    data: {
+      id: crypto.randomUUID(),
+      companyId: companies[1],
+      kind: "partner",
+      code: "FOREIGN",
+      data: catalogEntry,
+    },
+  });
+  const foreignInvoice = {
+    id: crypto.randomUUID(),
+    customer: catalogEntry.name,
+    total: 100,
+    paid: 0,
+    date: "2026-09-20",
+    version: 0,
+    partnerId: other.id,
+  };
+  assert.equal(
+    (
+      await request(
+        "/operations",
+        { id: crypto.randomUUID(), invoice: foreignInvoice, baseVersion: 0 },
+        a.data.token,
+      )
+    ).status,
+    422,
+  );
   const invoice = {
     id: crypto.randomUUID(),
     customer: "Client fictiv Socot",
@@ -393,7 +466,7 @@ async function run() {
 run().finally(async () => {
   if (disposable)
     await db.$executeRawUnsafe(
-      'TRUNCATE "User", "Session", "Invoice", "Operation", "Journal", "Audit", "AccountingRule", "AccountingPeriod", "ComplianceAudit", "RegulatoryReport", "CompanyProfile", "ChartAccount" CASCADE',
+      'TRUNCATE "User", "Session", "Invoice", "Operation", "Journal", "Audit", "AccountingRule", "AccountingPeriod", "ComplianceAudit", "RegulatoryReport", "CompanyProfile", "ChartAccount", "CatalogEntry" CASCADE',
     );
   await db.$disconnect();
 });

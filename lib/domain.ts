@@ -5,6 +5,8 @@ export const invoiceSchema = z
     id: z.uuid(),
     kind: z.enum(["sale", "expense"]).optional(),
     category: z.string().trim().max(80).optional(),
+    partnerId: z.uuid().nullable().optional(),
+    contractId: z.uuid().nullable().optional(),
     customer: z.string().trim().min(2).max(120),
     total: z.number().int().positive().max(100_000_000),
     paid: z.number().int().nonnegative(),
@@ -36,6 +38,8 @@ export function applyOperation(
     current &&
     ((current.kind ?? "sale") !== (operation.invoice.kind ?? "sale") ||
       (current.category ?? "") !== (operation.invoice.category ?? "") ||
+      (current.partnerId ?? null) !== (operation.invoice.partnerId ?? null) ||
+      (current.contractId ?? null) !== (operation.invoice.contractId ?? null) ||
       current.total !== operation.invoice.total ||
       current.customer !== operation.invoice.customer ||
       current.date !== operation.invoice.date ||

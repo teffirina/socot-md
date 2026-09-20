@@ -1,4 +1,6 @@
 "use client";
+import PartnerFields from "./partner-fields";
+import CatalogPanel from "./catalog-panel";
 import packageInfo from "../package.json";
 import ExpensesPanel from "./expenses-panel";
 import CompanyPanel from "./company-panel";
@@ -159,6 +161,8 @@ export default function Page() {
       const invoice = invoiceSchema.parse({
         id: crypto.randomUUID(),
         customer: f.get("customer"),
+        partnerId: f.get("partnerId") || null,
+        contractId: f.get("contractId") || null,
         total: Math.round(Number(f.get("total")) * 100),
         paid: 0,
         version: 0,
@@ -188,7 +192,7 @@ export default function Page() {
     });
   }
   async function logout() {
-    if (state.pending.length) {
+    if (state.pending.length + (state.catalogPending?.length ?? 0)) {
       setError(
         "Există operațiuni nesincronizate. Rezolvă-le înainte de deconectare.",
       );
@@ -388,7 +392,10 @@ export default function Page() {
                 "Rapoarte",
               ],
             },
-            { label: "ADMINISTRARE", items: ["Întreprindere", "Setări"] },
+            {
+              label: "ADMINISTRARE",
+              items: ["Întreprindere", "Nomenclatoare", "Setări"],
+            },
           ].map((group) => (
             <div key={group.label}>
               <p className="navlabel">{group.label}</p>
@@ -413,6 +420,7 @@ export default function Page() {
                           Rapoarte: "▥",
                           Întreprindere: "▣",
                           Setări: "⚙",
+                          Nomenclatoare: "▤",
                         } as Record<string, string>
                       )[v]
                     }
@@ -477,6 +485,8 @@ export default function Page() {
                       Întreprindere:
                         "Datele firmei, contactele și politica contabilă.",
                       Setări: "Conexiune, stocare locală și actualizări.",
+                      Nomenclatoare:
+                        "Date de referință comune pentru documentele firmei.",
                     } as Record<string, string>
                   )[view]
                 }
@@ -495,7 +505,11 @@ export default function Page() {
             <div className="notice">
               O versiune nouă Socot este disponibilă.{" "}
               <button
-                disabled={busy || state.pending.length > 0}
+                disabled={
+                  busy ||
+                  state.pending.length > 0 ||
+                  (state.catalogPending?.length ?? 0) > 0
+                }
                 onClick={() =>
                   action(async () => {
                     await update.downloadAndInstall();
@@ -796,6 +810,14 @@ export default function Page() {
               writable={writable}
             />
           )}
+          {view === "Nomenclatoare" && (
+            <CatalogPanel
+              snapshot={state}
+              engine={engine.current!}
+              demo={demo}
+              role={session.role}
+            />
+          )}
           {view === "Întreprindere" && (
             <CompanyPanel
               demo={demo}
@@ -931,17 +953,7 @@ export default function Page() {
             <h2 id="invoice-title">Factură nouă</h2>
             <p className="muted">Flux simplificat pentru servicii, fără TVA.</p>
             <form onSubmit={create}>
-              <label>
-                Client
-                <input
-                  name="customer"
-                  autoFocus
-                  required
-                  minLength={2}
-                  maxLength={120}
-                  placeholder="Denumirea clientului"
-                />
-              </label>
+              <PartnerFields entries={state.catalog ?? []} />
               <label>
                 Total (MDL)
                 <input

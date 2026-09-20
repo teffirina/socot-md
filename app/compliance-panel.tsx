@@ -1,4 +1,5 @@
 "use client";
+import AccountsPanel from "./accounts-panel";
 import { useEffect, useState } from "react";
 import { can } from "../lib/permissions";
 import { api } from "../lib/api";
@@ -259,7 +260,14 @@ export default function CompliancePanel({
         sa de intrare în vigoare. Operațiunile vechi își păstrează versiunea.
       </p>
       <div className="controls">
-        {["Reguli", "Perioade", "Jurnal", "Raportare", "Audit"].map((t) => (
+        {[
+          "Reguli",
+          "Perioade",
+          "Jurnal",
+          "Raportare",
+          "Audit",
+          "Conturi avansate",
+        ].map((t) => (
           <button
             className={tab === t ? "" : "secondary"}
             key={t}
@@ -269,6 +277,14 @@ export default function CompliancePanel({
           </button>
         ))}
       </div>
+      {tab === "Conturi avansate" && (
+        <AccountsPanel
+          demo={demo}
+          role={role}
+          snapshot={snapshot}
+          engine={engine}
+        />
+      )}
       {error && (
         <p role="alert" className="error">
           {error}

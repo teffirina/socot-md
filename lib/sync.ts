@@ -1,4 +1,11 @@
 import {
+  catalogOperationSchema,
+  validateDocumentReferences,
+  validateCatalogChange,
+  type CatalogEntry,
+  type CatalogPending,
+} from "./catalog";
+import {
   initialCompliance,
   demoRules,
   assertPeriodOpen,
@@ -70,6 +77,7 @@ export class SyncEngine {
     };
     if (this.demo) {
       const old = this.state.invoices.find((i) => i.id === invoice.id) ?? null;
+      if (!old) validateDocumentReferences(this.state.catalog ?? [], invoice);
       const compliance = this.state.compliance ?? initialCompliance();
       assertPeriodOpen(compliance.periods, op.effectiveDate!);
       const rule = selectRule(
@@ -118,6 +126,80 @@ export class SyncEngine {
     }
     await this.commit({ ...this.state, pending: [...this.state.pending, op] });
     await this.sync();
+  }
+  async saveCatalog(entry: CatalogEntry, reason: string) {
+    if (this.running) throw Error("Sincronizare în curs. Reîncearcă imediat.");
+    if (this.state.catalogPending?.some((p) => p.entry.id === entry.id))
+      throw Error("Rezolvă operațiunea locală anterioară înainte de editare.");
+    const op = catalogOperationSchema.parse({
+      id: crypto.randomUUID(),
+      entry,
+      baseVersion: entry.version,
+      reason,
+    });
+    if (this.demo) {
+      const next = validateCatalogChange(this.state.catalog ?? [], op);
+      const compliance = this.state.compliance ?? initialCompliance();
+      await this.commit({
+        ...this.state,
+        catalog: [
+          ...(this.state.catalog ?? []).filter((e) => e.id !== entry.id),
+          next,
+        ],
+        compliance: {
+          ...compliance,
+          audit: [
+            {
+              id: op.id,
+              actor: "Utilizator demo",
+              action: "catalog.saved",
+              objectId: entry.id,
+              reason,
+              at: new Date().toISOString(),
+            },
+            ...compliance.audit,
+          ],
+        },
+      });
+      return;
+    }
+    await this.commit({
+      ...this.state,
+      catalogPending: [...(this.state.catalogPending ?? []), op],
+    });
+    await this.sync();
+  }
+  async resolveCatalog(id: string, keepLocal: boolean) {
+    if (this.running) throw Error("Sincronizare în curs");
+    const p = this.state.catalogPending?.find((p) => p.id === id);
+    if (!p || p.conflict === undefined) return;
+    let remaining = this.state.catalogPending!.filter((p) => p.id !== id);
+    if (keepLocal) {
+      if (!p.conflict)
+        throw Error(
+          "Înregistrarea lipsește pe server. Creează una nouă după verificare.",
+        );
+      remaining = [
+        ...remaining,
+        {
+          id: crypto.randomUUID(),
+          entry: { ...p.entry, version: p.conflict.version },
+          baseVersion: p.conflict.version,
+          reason: p.reason,
+        },
+      ];
+    }
+    await this.commit({ ...this.state, catalogPending: remaining });
+    await this.sync();
+  }
+  async discardCatalog(id: string) {
+    if (this.running) throw Error("Sincronizare în curs");
+    if (!this.state.catalogPending?.find((p) => p.id === id)?.error)
+      throw Error("Numai operațiunile respinse pot fi retrase.");
+    await this.commit({
+      ...this.state,
+      catalogPending: this.state.catalogPending.filter((p) => p.id !== id),
+    });
   }
   async configure(compliance: ComplianceState) {
     if (!this.demo) throw new Error("Configurarea reală se face prin API");
@@ -168,6 +250,48 @@ export class SyncEngine {
     try {
       await this.deps.api("/health");
       this.changed(this.state, "Sincronizare…");
+      for (const op of [...(this.state.catalogPending ?? [])]) {
+        if (op.conflict !== undefined || op.error) continue;
+        try {
+          const entry: CatalogEntry = await this.deps.api("/catalog", {
+            id: op.id,
+            entry: op.entry,
+            baseVersion: op.baseVersion,
+            reason: op.reason,
+          });
+          await this.commit({
+            ...this.state,
+            catalog: [
+              ...(this.state.catalog ?? []).filter((e) => e.id !== entry.id),
+              entry,
+            ],
+            catalogPending: this.state.catalogPending!.filter(
+              (p) => p.id !== op.id,
+            ),
+          });
+        } catch (e) {
+          if (
+            e instanceof ApiError &&
+            [409, 400, 403, 422].includes(e.status)
+          ) {
+            await this.commit({
+              ...this.state,
+              catalogPending: this.state.catalogPending!.map((p) =>
+                p.id === op.id
+                  ? {
+                      ...p,
+                      ...(e.status === 409
+                        ? { conflict: e.data.current ?? null }
+                        : { error: e.message }),
+                    }
+                  : p,
+              ),
+            });
+            continue;
+          }
+          throw e;
+        }
+      }
       for (const op of [...this.state.pending]) {
         if (op.conflict !== undefined || op.error) continue;
         try {
@@ -207,15 +331,17 @@ export class SyncEngine {
           throw e;
         }
       }
+      const catalog: CatalogEntry[] = await this.deps.api("/catalog");
       const invoices: Invoice[] = await this.deps.api("/invoices");
       await this.commit({
         ...this.state,
+        catalog,
         invoices: invoices.slice(-200),
         pending: this.state.pending,
       });
       this.changed(
         this.state,
-        this.state.pending.length
+        this.state.pending.length + (this.state.catalogPending?.length ?? 0)
           ? "Necesită atenție"
           : "Conectat • sincronizat",
       );

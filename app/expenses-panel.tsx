@@ -1,4 +1,5 @@
 "use client";
+import PartnerFields from "./partner-fields";
 import { useState } from "react";
 import { invoiceSchema, totals, type Invoice } from "../lib/domain";
 import type { Snapshot } from "../lib/storage";
@@ -46,6 +47,8 @@ export default function ExpensesPanel({
         : invoiceSchema.parse({
             id: crypto.randomUUID(),
             kind: "expense",
+            partnerId: data.get("partnerId") || null,
+            contractId: data.get("contractId") || null,
             category: String(data.get("category")),
             customer: String(data.get("supplier")),
             date: String(data.get("date")),
@@ -262,16 +265,7 @@ export default function ExpensesPanel({
                 </p>
               ) : (
                 <>
-                  <label>
-                    Furnizor
-                    <input
-                      name="supplier"
-                      required
-                      minLength={2}
-                      maxLength={120}
-                      autoFocus
-                    />
-                  </label>
+                  <PartnerFields entries={snapshot.catalog ?? []} expense />
                   <label>
                     Categorie
                     <select name="category">

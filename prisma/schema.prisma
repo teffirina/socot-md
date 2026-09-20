@@ -24,6 +24,8 @@ enum DocumentKind {
  expense
 }
 model Invoice {
+ partnerId String?
+ contractId String?
  kind DocumentKind @default(sale)
  category String @default("")
  id String @id
@@ -124,4 +126,13 @@ model ChartAccount {
  data Json
  version Int @default(1)
  @@unique([companyId,code])
+}
+
+model CatalogEntry {
+ id String @id
+ companyId String
+ kind String
+ code String
+ data Json
+ @@unique([companyId, kind, code])
 }
