@@ -1,5 +1,6 @@
 "use client";
 import PartnerFields from "./partner-fields";
+import LegislationPanel from "./legislation-panel";
 import CatalogPanel from "./catalog-panel";
 import packageInfo from "../package.json";
 import ExpensesPanel from "./expenses-panel";
@@ -394,7 +395,7 @@ export default function Page() {
             },
             {
               label: "ADMINISTRARE",
-              items: ["Întreprindere", "Nomenclatoare", "Setări"],
+              items: ["Întreprindere", "Nomenclatoare", "Legislație", "Setări"],
             },
           ].map((group) => (
             <div key={group.label}>
@@ -421,6 +422,7 @@ export default function Page() {
                           Întreprindere: "▣",
                           Setări: "⚙",
                           Nomenclatoare: "▤",
+                          Legislație: "§",
                         } as Record<string, string>
                       )[v]
                     }
@@ -810,6 +812,7 @@ export default function Page() {
               writable={writable}
             />
           )}
+          {view === "Legislație" && <LegislationPanel demo={demo} />}
           {view === "Nomenclatoare" && (
             <CatalogPanel
               snapshot={state}

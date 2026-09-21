@@ -136,3 +136,20 @@ model CatalogEntry {
  data Json
  @@unique([companyId, kind, code])
 }
+
+// Public legal corpus, independent from company financial records.
+model LegalVersion {
+ id String @id
+ actId String
+ language String
+ sourceDocumentId String
+ sourceUrl String
+ contentHash String
+ data Json
+ verifiedBy String?
+ verifiedAt DateTime?
+ verificationNote String?
+ importedAt DateTime @default(now())
+ @@index([actId, language])
+ @@index([importedAt, id])
+}

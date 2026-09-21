@@ -1,3 +1,4 @@
+import { legislationRouter } from "./legislation";
 import { validateDocumentReferences, catalogSchema } from "../lib/catalog";
 import { catalogRouter } from "./catalog";
 import { companyRouter } from "./company";
@@ -144,6 +145,7 @@ app.get("/api/invoices", async (_req, res) =>
   ),
 );
 app.use("/api", catalogRouter(db));
+app.use("/api", legislationRouter(db));
 app.use("/api", companyRouter(db));
 app.use("/api", complianceRouter(db));
 app.post("/api/operations", async (req, res) => {

@@ -74,6 +74,121 @@ async function run() {
     email: "admin-test@socot.local",
     password,
   });
+  const legal = {
+    actId: "TEST-LEGAL",
+    sourceDocumentId: "TEST",
+    title: "Lege fictivă corpus",
+    issuer: "Test",
+    actType: "Lege",
+    number: "TEST",
+    adoptedOn: "2025-01-01",
+    publishedOn: "2025-01-02",
+    language: "ro",
+    sourceUrl: "https://www.legis.md/cautare/getResults?doc_id=1&lang=ro",
+    sourceClass: "official",
+    status: "adopted",
+    validFrom: "2025-02-01",
+    validTo: "2026-01-01",
+    repealedOn: null,
+    provisions: [
+      {
+        reference: "art. 1",
+        text: "Exemplu fictiv corpus",
+        validFrom: null,
+        validTo: null,
+      },
+    ],
+  };
+  await db.legalVersion.create({
+    data: {
+      id: "test-legal-version",
+      actId: legal.actId,
+      language: "ro",
+      sourceDocumentId: "TEST",
+      sourceUrl: legal.sourceUrl,
+      contentHash: "test-only",
+      data: legal,
+    },
+  });
+  assert.equal(
+    (
+      await request(
+        "/legislation/search",
+        { at: "2025-03-01", view: "current" },
+        admin.data.token,
+      )
+    ).data.items.length,
+    0,
+  );
+  const staged = await request(
+    "/legislation/search",
+    { at: "2025-03-01", view: "unverified", q: "corpus" },
+    admin.data.token,
+  );
+  assert.equal(staged.data.items.length, 1);
+  assert.equal(staged.data.items[0].provisions.length, 0);
+  assert.equal(
+    (await request("/legislation/search", { at: "2025-03-01" })).status,
+    401,
+  );
+  assert.equal(
+    (
+      await request(
+        "/legislation/verify",
+        {
+          id: "a".repeat(64),
+          hash: "b".repeat(64),
+          note: "Test fără drept de curator",
+        },
+        admin.data.token,
+      )
+    ).status,
+    403,
+  );
+  await db.legalVersion.update({
+    where: { id: "test-legal-version" },
+    data: { verifiedAt: new Date(), verifiedBy: "test-fixture" },
+  });
+  const current = await request(
+    "/legislation/search",
+    { at: "2025-03-01", view: "current" },
+    admin.data.token,
+  );
+  assert.equal(current.data.items.length, 1);
+  assert.equal(current.data.items[0].provisions.length, 1);
+  assert.equal(
+    (
+      await request(
+        "/legislation/search",
+        { at: "2026-01-01", view: "archive" },
+        admin.data.token,
+      )
+    ).data.items.length,
+    1,
+  );
+  assert.equal(
+    (
+      await request(
+        "/legislation/search",
+        { at: "2025-01-01", view: "future" },
+        admin.data.token,
+      )
+    ).data.items.length,
+    1,
+  );
+  assert.equal(
+    (
+      await request(
+        "/legislation/search",
+        { at: "2025-01-01", view: "future", q: "' OR 1=1 --" },
+        admin.data.token,
+      )
+    ).status,
+    200,
+  );
+  console.log(
+    "PASS: legal corpus quarantine, effective-date filters, search and curator isolation",
+  );
   const profile = {
     data: demoCompany,
     baseVersion: 0,
@@ -466,7 +581,7 @@ async function run() {
 run().finally(async () => {
   if (disposable)
     await db.$executeRawUnsafe(
-      'TRUNCATE "User", "Session", "Invoice", "Operation", "Journal", "Audit", "AccountingRule", "AccountingPeriod", "ComplianceAudit", "RegulatoryReport", "CompanyProfile", "ChartAccount", "CatalogEntry" CASCADE',
+      'TRUNCATE "User", "Session", "Invoice", "Operation", "Journal", "Audit", "AccountingRule", "AccountingPeriod", "ComplianceAudit", "RegulatoryReport", "CompanyProfile", "ChartAccount", "CatalogEntry", "LegalVersion" CASCADE',
     );
   await db.$disconnect();
 });

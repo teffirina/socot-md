@@ -112,6 +112,8 @@ async fn api_request(path: String, body: Option<Value>) -> Result<Value, String>
     if ![
         "/login",
         "/catalog",
+        "/legislation/search",
+        "/legislation/verify",
         "/logout",
         "/me",
         "/invoices",
