@@ -1,6 +1,6 @@
 # Corpus legislativ Socot — implementare inițială
 
-Nu a fost importată baza integrală legis.md. Nu există corpus oficial preinstalat și nici estimare verificată a numărului actelor în vigoare. Accesul prin instrument la exemplul doc_id=150498 a eșuat; endpoint-urile publice documentate de e-Lex pentru versions/manifest/healthz au fost inaccesibile la verificarea din 21.09.2026. Documentația e-Lex nu dovedește disponibilitatea unui export oficial. În browser, exemplul a afișat titlul CC1107/2002, dar corpul paginii a rămas „Conținutul se încarcă...”; datele versiunii nu sunt confirmate.
+Nu a fost importată baza integrală legis.md. Nu există corpus oficial preinstalat și nici estimare verificată a numărului actelor în vigoare. Accesul prin instrument la exemplul doc_id=150498 a eșuat; endpoint-urile publice documentate de e-Lex pentru versions/manifest/healthz au fost inaccesibile la verificarea din 21.09.2026. Documentația e-Lex nu dovedește disponibilitatea unui export oficial. După încărcarea întârziată în browser, textul Codului civil CC1107/2002 a devenit accesibil. Versiunea doc_id=150498 afișează 01.04.2026; selectarea anului 2027 a dus la doc_id=149719, cu modificări aplicabile din 01.01.2027. Accesul automat direct la PDF a returnat 403. Lectura în browser nu reprezintă încă un mecanism de export integral.
 
 ## Implementat
 
@@ -22,3 +22,7 @@ Nu există încă serviciu server de sincronizare zilnică a corpusului, nici as
 ## Obținerea sursei
 
 Este necesar un export autorizat care include identificator stabil de act, versiuni/doc_id, relații de modificare/abrogare, publicare, date de aplicare și anexe. Nu s-au creat abonamente, nu s-au trimis mesaje și nu s-au descărcat baze integrale. Documentația publică: https://e-lex.md/api ; registrul oficial: https://www.legis.md/ .
+
+## Verificări executate
+
+32 teste automate trecute, integrare pe PostgreSQL temporar trecută (migrare, autentificare, carantină, căutare, intervale, curator), export web reușit, cargo check reușit. Ecranul Legislație verificat în browser. Datele demonstrative existente rămân prezente. Buildurile instalatoarelor pentru acest commit nu sunt încă verificate local; arhiva Windows 0.5.0 distribuită anterior nu include această modificare.
