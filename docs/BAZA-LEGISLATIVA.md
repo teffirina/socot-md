@@ -11,7 +11,7 @@ Nu a fost importată baza integrală legis.md. Nu există corpus oficial preinst
 - Separare: în vigoare / viitoare / arhivă / proiecte / neverificate / aplicare necunoscută. Data de sfârșit este exclusivă. Abrogarea completă este distinctă de intervalele prevederilor. Datele necunoscute nu se ghicesc.
 - API autentificat `/legislation/search`: data ISO, cuvinte-cheie, categorie și paginare 50. Căutare PostgreSQL full-text, fără executarea textului ca SQL. Datele legislative publice sunt comune firmelor; datele firmelor nu intră în corpus.
 - `/legislation/verify`: cont admin/contabil-șef și ID inclus explicit în variabila server SOCOT_LEGAL_CURATORS (listă separată prin virgulă). Niciun curator activ implicit. Cere hash-ul reviziei și notă de verificare, sursă oficială, statut adoptat, date cunoscute; respinge intervalele suprapuse. Păstrează autor/data/nota validării. Nu modifică formulele contabile.
-- Interfața Legislație oferă căutarea la o dată și separarea categoriilor; în demo precizează că nu există corpus importat. Nu copiază întreaga bază pe dispozitiv.
+- La cererea utilizatorului, biblioteca legislativă nu are ecran sau buton în Administrare. Corpusul, importul și căutarea rămân pe server, în baza de date și API. Nu copiază întreaga bază pe dispozitiv.
 
 ## Limite și lucrări rămase
 
