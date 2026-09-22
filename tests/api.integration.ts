@@ -294,6 +294,7 @@ async function run() {
   const invoice = {
     id: crypto.randomUUID(),
     customer: "Client fictiv Socot",
+    sourceRef: "sha256-test:Foaia1:2",
     total: 600000,
     paid: 0,
     version: 0,
@@ -305,6 +306,12 @@ async function run() {
     request("/operations", op, a.data.token),
   ]);
   assert.ok(results.every((x) => x.status === 200));
+  assert.equal(
+    (await request("/invoices", undefined, a.data.token)).data.find(
+      (i: any) => i.id === invoice.id,
+    ).sourceRef,
+    invoice.sourceRef,
+  );
   assert.equal(await db.journal.count({ where: { invoiceId: invoice.id } }), 1);
   assert.equal((await request("/operations", op, b.data.token)).status, 403);
   assert.equal(

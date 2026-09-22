@@ -24,6 +24,7 @@ enum DocumentKind {
  expense
 }
 model Invoice {
+ sourceRef String?
  partnerId String?
  contractId String?
  kind DocumentKind @default(sale)

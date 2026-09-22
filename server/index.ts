@@ -132,6 +132,7 @@ app.get("/api/invoices", async (_req, res) =>
       select: {
         id: true,
         customer: true,
+        sourceRef: true,
         partnerId: true,
         contractId: true,
         kind: true,
@@ -263,6 +264,7 @@ app.post("/api/operations", async (req, res) => {
           ? {
               id: c.id,
               customer: c.customer,
+              sourceRef: c.sourceRef,
               partnerId: c.partnerId,
               contractId: c.contractId,
               kind: c.kind,

@@ -64,3 +64,11 @@ Permisiunile exacte sunt în `lib/permissions.ts`. Directorul și auditorul nu m
 `POST /ledger-report` primește `{from,to}` (date ISO), cere `journal.read` și calculează balanța din istoricul companiei. Include soldul anterior perioadei; exclude articole nepostate/fără dată. Refuză explicit istoricul peste 100.000 articole în loc să emită un raport incomplet. Nu folosește cache-ul de 200 facturi.
 
 `POST /source-document` primește `{id}` și returnează factura numai din compania sesiunii; 404 inclusiv pentru ID-uri din alte companii. Cere `journal.read`. Starea documentului este cea curentă, nu un snapshot istoric la data raportului.
+
+## Nomenclatoare 0.5
+
+`GET /catalog`: până la 1000 înregistrări din firma sesiunii, filtrate după rol; refuză explicit depășirea limitei. `POST /catalog`: `{id, entry, baseVersion, reason}` cu UUID idempotent, versiune și motiv de minimum 10 caractere. `entry` conține `{id, kind, code, name, version, active, details}`. Tipurile și câmpurile permise sunt definite în `lib/catalog.ts`; cheile necunoscute din details sunt refuzate. 409 returnează versiunea curentă pentru rezolvare explicită. Nu există ștergere; arhivarea folosește `active:false`.
+
+Documentele noi pot include `partnerId` și `contractId`; serverul verifică firma, rolul partenerului, numele selectat și valabilitatea contractului la data documentului. Referințele nu pot fi schimbate prin operația de plată. Documentele anterioare fără referințe rămân valide.
+
+Import 0.6: `Invoice.sourceRef` este un șir opțional/nullable (maximum 180 caractere), păstrat în PostgreSQL, GET invoices, conflicte și audit. Proveniența devine imuabilă după crearea documentului. Originalul/prelucrarea nu sunt încă arhivate în API; vezi `SPATIU-DE-LUCRU.md`.

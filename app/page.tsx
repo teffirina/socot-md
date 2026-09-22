@@ -1,4 +1,5 @@
 "use client";
+import ImportPanel from "./import-panel";
 import PartnerFields from "./partner-fields";
 import CatalogPanel from "./catalog-panel";
 import packageInfo from "../package.json";
@@ -382,7 +383,10 @@ export default function Page() {
         </div>
         <nav aria-label="Navigare principală">
           {[
-            { label: "ACTIVITATE", items: ["Acasă", "Vânzări", "Cheltuieli"] },
+            {
+              label: "ACTIVITATE",
+              items: ["Acasă", "Spațiu de lucru", "Vânzări", "Cheltuieli"],
+            },
             {
               label: "CONTABILITATE",
               items: [
@@ -414,6 +418,7 @@ export default function Page() {
                       (
                         {
                           Acasă: "◫",
+                          "Spațiu de lucru": "▦",
                           Vânzări: "↗",
                           Cheltuieli: "↙",
                           Contabilitate: "≋",
@@ -475,6 +480,8 @@ export default function Page() {
                     {
                       Acasă:
                         "Solduri, documente recente și lucrurile de rezolvat.",
+                      "Spațiu de lucru":
+                        "Pregătește datele înainte de înregistrarea contabilă.",
                       Vânzări:
                         "Facturi, clienți și încasări într-un singur registru.",
                       Cheltuieli: "Furnizori, cheltuieli și sume de plată.",
@@ -738,6 +745,12 @@ export default function Page() {
                           <tr key={i.id}>
                             <td>
                               <strong>{i.customer}</strong>
+                              {i.sourceRef && (
+                                <small title={i.sourceRef}>
+                                  Import · {i.sourceRef.slice(0, 12)}… · rând{" "}
+                                  {i.sourceRef.split(":").at(-1)}
+                                </small>
+                              )}
                               <small>
                                 Socot · {i.id.slice(0, 8).toUpperCase()}
                               </small>
@@ -803,6 +816,13 @@ export default function Page() {
             (demo || can(session.role, "journal.read")) && (
               <LedgerPanel demo={demo} snapshot={state} />
             )}
+          {view === "Spațiu de lucru" && (
+            <ImportPanel
+              engine={engine.current!}
+              snapshot={state}
+              writable={writable}
+            />
+          )}
           {view === "Cheltuieli" && (
             <ExpensesPanel
               snapshot={state}

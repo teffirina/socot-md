@@ -1019,3 +1019,11 @@ fieldset:disabled {
     display: none;
   }
 }
+
+.import-panel { padding: 24px; }
+.import-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 18px 0; }
+.import-panel label { display: inline-flex; flex-direction: column; gap: 6px; }
+.import-panel .tablewrap { margin-top: 18px; max-height: 520px; overflow: auto; }
+.import-panel td input { min-width: 150px; width: 100%; padding: 8px; }
+.import-panel small { max-width: 240px; overflow-wrap: anywhere; }
+.import-panel details { margin-top: 24px; }

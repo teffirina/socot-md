@@ -191,6 +191,12 @@ export default function ExpensesPanel({
                 <tr key={i.id}>
                   <td>
                     <strong>{i.customer}</strong>
+                    {i.sourceRef && (
+                      <small title={i.sourceRef}>
+                        Import · {i.sourceRef.slice(0, 12)}… · rând{" "}
+                        {i.sourceRef.split(":").at(-1)}
+                      </small>
+                    )}
                     <small>
                       {i.category} · {i.id.slice(0, 8).toUpperCase()}
                     </small>

@@ -3,6 +3,7 @@ import { z } from "zod";
 export const invoiceSchema = z
   .object({
     id: z.uuid(),
+    sourceRef: z.string().max(180).nullable().optional(),
     kind: z.enum(["sale", "expense"]).optional(),
     category: z.string().trim().max(80).optional(),
     partnerId: z.uuid().nullable().optional(),
@@ -40,6 +41,7 @@ export function applyOperation(
       (current.category ?? "") !== (operation.invoice.category ?? "") ||
       (current.partnerId ?? null) !== (operation.invoice.partnerId ?? null) ||
       (current.contractId ?? null) !== (operation.invoice.contractId ?? null) ||
+      (current.sourceRef ?? null) !== (operation.invoice.sourceRef ?? null) ||
       current.total !== operation.invoice.total ||
       current.customer !== operation.invoice.customer ||
       current.date !== operation.invoice.date ||
