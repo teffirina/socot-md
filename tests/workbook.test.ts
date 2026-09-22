@@ -68,6 +68,17 @@ test("staged rows produce validated cents and immutable provenance only on expli
     ).total,
     101,
   );
+  assert.equal(
+    prepareRow(
+      [grid[0], ["Socot", "2026-09-22", "4.004999999"]],
+      1,
+      suggestMapping(grid[0]),
+      id,
+      "hash",
+      "sale",
+    ).total,
+    400,
+  );
   assert.equal(doc.date, "2026-09-22");
   assert.equal(JSON.stringify(grid), before);
   const created = applyOperation(null, {

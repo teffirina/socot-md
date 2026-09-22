@@ -185,15 +185,17 @@ export function prepareRow(
     ? rawDate.split(".").reverse().join("-")
     : rawDate;
   if (!grid[row][mapping.total]?.trim()) throw new Error("Suma lipsește.");
+  const [coefficient, exponent = "0"] = calculate(grid, row, mapping.total)
+    .toString()
+    .split("e");
+  const cents = Math.round(Number(`${coefficient}e${Number(exponent) + 2}`));
   return invoiceSchema.parse({
     id,
     sourceRef,
     kind,
     customer: grid[row][mapping.customer] ?? "",
     date,
-    total: Math.round(
-      Number(calculate(grid, row, mapping.total).toFixed(8)) * 100 + 1e-7,
-    ),
+    total: cents,
     paid: 0,
     version: 0,
   });
