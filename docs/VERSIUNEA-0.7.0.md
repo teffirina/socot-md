@@ -27,3 +27,16 @@ Versiunea include migrarea `202610070001_posting_groups`, care permite mai multe
 ## Verificare
 
 Rezultatele definitive ale împachetării și testelor sunt consemnate în release-ul GitHub și raportul local al buildului. Nu se consideră verificată instalarea pe un alt Mac doar pentru că DMG-ul a fost generat.
+
+### Rezultate confirmate la 8 octombrie 2026
+
+Pentru commitul `6ecbe4c` (tag `v0.7.0`):
+
+- Local: TypeScript, 66/66 teste și build web static reușite.
+- Local: Tauri a generat aplicația și DMG-ul Apple Silicon; `hdiutil verify` și verificarea semnăturii ad-hoc au trecut. Identificatorul și versiunea sunt corecte.
+- Local: aplicația din DMG a pornit; foile de calcul și registrul documentelor au fost accesibile în modul SQLite, cu datele locale existente vizibile.
+- Semnătura updater a fost verificată cu cheia existentă; pachetul alterat a fost respins.
+- GitHub: jobul API (inclusiv migrările PostgreSQL și testele de integrare) și jobul macOS au trecut. Artefactul macOS descărcat a trecut și verificarea locală de integritate/semnătură.
+- Windows era încă în compilare la redactarea acestei note. Starea finală și instalatoarele se verifică în [rularea versiunii](https://github.com/teffirina/socot-md/actions/runs/37780668621).
+
+SHA-256 al DMG-ului construit local (diferit de pachetul construit independent de GitHub): `a69ca517baa441c6b4b9d0887f8439e1c53cbcf17f1bfe05f07de55421049fb8`.
