@@ -7,11 +7,11 @@ Fiecare cerință se închide numai cu implementare web/desktop, API, migrare f�
 | SOC-001 | 1. Ce trebuie să conțină programul 1C | denumirea companiei | De verificat / implementat |
 | SOC-002 | 1. Ce trebuie să conțină programul 1C | IDNO și codul TVA | De verificat / implementat |
 | SOC-003 | 1. Ce trebuie să conțină programul 1C | adresa juridică | De verificat / implementat |
-| SOC-004 | 1. Ce trebuie să conțină programul 1C | conturile bancare | De verificat / implementat |
+| SOC-004 | 1. Ce trebuie să conțină programul 1C | conturile bancare | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
 | SOC-005 | 1. Ce trebuie să conțină programul 1C | directorul și contabilul-șef | De verificat / implementat |
-| SOC-006 | 1. Ce trebuie să conțină programul 1C | subdiviziunile | De verificat / implementat |
-| SOC-007 | 1. Ce trebuie să conțină programul 1C | depozitele | De verificat / implementat |
-| SOC-008 | 1. Ce trebuie să conțină programul 1C | casieriile | De verificat / implementat |
+| SOC-006 | 1. Ce trebuie să conțină programul 1C | subdiviziunile | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-007 | 1. Ce trebuie să conțină programul 1C | depozitele | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-008 | 1. Ce trebuie să conțină programul 1C | casieriile | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
 | SOC-009 | 1. Ce trebuie să conțină programul 1C | politica contabilă | De verificat / implementat |
 | SOC-010 | 1. Ce trebuie să conțină programul 1C | moneda de bază | De verificat / implementat |
 | SOC-011 | 1. Ce trebuie să conțină programul 1C | regimul fiscal | De verificat / implementat |
@@ -19,21 +19,21 @@ Fiecare cerință se închide numai cu implementare web/desktop, API, migrare f�
 | SOC-013 | 1. Ce trebuie să conțină programul 1C | utilizatorii și drepturile lor | De verificat / implementat |
 | SOC-014 | 1. Ce trebuie să conțină programul 1C | soldurile inițiale | De verificat / implementat |
 | SOC-015 | 1. Ce trebuie să conțină programul 1C | planul de conturi | De verificat / implementat |
-| SOC-016 | 1. Ce trebuie să conțină programul 1C | clienți și furnizori | De verificat / implementat |
-| SOC-017 | 1. Ce trebuie să conțină programul 1C | contracte | De verificat / implementat |
-| SOC-018 | 1. Ce trebuie să conțină programul 1C | produse și servicii | De verificat / implementat |
-| SOC-019 | 1. Ce trebuie să conțină programul 1C | materiale | De verificat / implementat |
-| SOC-020 | 1. Ce trebuie să conțină programul 1C | unități de măsură | De verificat / implementat |
-| SOC-021 | 1. Ce trebuie să conțină programul 1C | cote TVA | De verificat / implementat |
-| SOC-022 | 1. Ce trebuie să conțină programul 1C | valute | De verificat / implementat |
-| SOC-023 | 1. Ce trebuie să conțină programul 1C | cursuri valutare | De verificat / implementat |
-| SOC-024 | 1. Ce trebuie să conțină programul 1C | depozite | De verificat / implementat |
-| SOC-025 | 1. Ce trebuie să conțină programul 1C | conturi bancare | De verificat / implementat |
-| SOC-026 | 1. Ce trebuie să conțină programul 1C | casierii | De verificat / implementat |
-| SOC-027 | 1. Ce trebuie să conțină programul 1C | angajați | De verificat / implementat |
-| SOC-028 | 1. Ce trebuie să conțină programul 1C | funcții | De verificat / implementat |
-| SOC-029 | 1. Ce trebuie să conțină programul 1C | mijloace fixe | De verificat / implementat |
-| SOC-030 | 1. Ce trebuie să conțină programul 1C | articole de venituri și cheltuieli | De verificat / implementat |
+| SOC-016 | 1. Ce trebuie să conțină programul 1C | clienți și furnizori | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-017 | 1. Ce trebuie să conțină programul 1C | contracte | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-018 | 1. Ce trebuie să conțină programul 1C | produse și servicii | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-019 | 1. Ce trebuie să conțină programul 1C | materiale | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-020 | 1. Ce trebuie să conțină programul 1C | unități de măsură | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-021 | 1. Ce trebuie să conțină programul 1C | cote TVA | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-022 | 1. Ce trebuie să conțină programul 1C | valute | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-023 | 1. Ce trebuie să conțină programul 1C | cursuri valutare | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-024 | 1. Ce trebuie să conțină programul 1C | depozite | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-025 | 1. Ce trebuie să conțină programul 1C | conturi bancare | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-026 | 1. Ce trebuie să conțină programul 1C | casierii | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-027 | 1. Ce trebuie să conțină programul 1C | angajați | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-028 | 1. Ce trebuie să conțină programul 1C | funcții | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-029 | 1. Ce trebuie să conțină programul 1C | mijloace fixe | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
+| SOC-030 | 1. Ce trebuie să conțină programul 1C | articole de venituri și cheltuieli | Parțial: registru comun 0.5; vezi NOMENCLATOARE.md. Fluxurile modulului rămân de implementat |
 | SOC-031 | 2. Modulul Cumpărări | factura furnizorului | De verificat / implementat |
 | SOC-032 | 2. Modulul Cumpărări | factura fiscală | De verificat / implementat |
 | SOC-033 | 2. Modulul Cumpărări | recepția mărfurilor și materialelor | De verificat / implementat |
@@ -218,3 +218,11 @@ Fiecare cerință se închide numai cu implementare web/desktop, API, migrare f�
 | SOC-212 | 15. Cum se corectează greșelile | aprobarea contabilului-șef | De verificat / implementat |
 
 Cerințe transversale: document → verificare/aprobare → postare atomică → registre → raport → document original; jurnal imuabil; debit egal credit; cote istorice; numerotare; acces pe rol și firmă; offline/sincronizare/conflicte; stornare fără ștergerea istoricului.
+
+## Dovezi pentru nomenclatoare
+
+- Commit inițial: 31e4e6c; 29 teste automate și build web trecute.
+- API PostgreSQL: job api al runului 35507822532 trecut, inclusiv idempotency, conflict și izolare între firme.
+- Browser: partener TEST-CAT creat; păstrat după reîncărcare și selectat în factura nouă. Factura de test nu a fost emisă.
+- Desktop 0.5.0: pornire și documente existente confirmate; formularul s-a blocat la accesul Keychain. Corecția e28f533 mută operațiile locale pe fir separat. Verificarea integrală după corecție rămâne deschisă.
+- Toate celelalte cerințe păstrează starea deschisă până la dovezi individuale.

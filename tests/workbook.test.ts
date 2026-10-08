@@ -124,3 +124,19 @@ test("XLSX dependency round trip preserves formulas separately from stale cached
   assert.equal(loaded.worksheets[0].getCell("C2").formula, "10*3");
   assert.equal(calculate([["=10*3"]], 0, 0), 30);
 });
+
+test("manual workbook export keeps numbers, formulas and text identifiers", async () => {
+  const { exportWorkbook } = await import("../lib/workbook");
+  const ExcelJS = await import("exceljs");
+  const grid = [["Partener", "Data", "Total", "Cod", "Cantitate", "Preț"], ["Test manual", "2026-10-06", "=E2*F2", "00123", "2", "12,50"]];
+  const bytes = await exportWorkbook(grid);
+  const book = new (ExcelJS.default ?? ExcelJS).Workbook();
+  await book.xlsx.load(bytes as any);
+  const sheet = book.worksheets[0];
+  assert.equal(sheet.getCell("E2").value, 2);
+  assert.equal(sheet.getCell("F2").value, 12.5);
+  assert.equal(sheet.getCell("D2").value, "00123");
+  assert.equal(sheet.getCell("C2").formula, "E2*F2");
+  assert.equal(sheet.getCell("C2").result, 25);
+  await assert.rejects(exportWorkbook([["Total"], ["=1/0"]]));
+});

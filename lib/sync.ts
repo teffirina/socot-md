@@ -1,3 +1,4 @@
+import { calculateDocumentLines } from "./document-lines";
 import {
   catalogOperationSchema,
   validateDocumentReferences,
@@ -13,10 +14,15 @@ import {
   type ComplianceState,
 } from "./compliance";
 import { demoData } from "./demo";
+import {
+  draftSchema,
+  invoiceFromDraft,
+  type DocumentDraft,
+} from "./document-workflow";
 import { api, ApiError } from "./api";
 import {
   applyOperation,
-  journal,
+  journalEntries,
   operationKind,
   type Invoice,
   type Pending,
@@ -59,9 +65,61 @@ export class SyncEngine {
       this.demo ? "Demo local" : `${state.pending.length} operațiuni locale`,
     );
   }
-  async enqueue(invoice: Invoice) {
+  async saveDraft(value: DocumentDraft) {
+    if (this.running) throw Error("Sincronizare în curs. Reîncearcă imediat.");
+    const draft = draftSchema.parse(value);
+    if (draft.lines) {
+      try {
+        draft.total = calculateDocumentLines(draft.lines).total;
+      } catch {
+        draft.total = 0;
+      } // Incomplete input remains editable; never use an old total.
+    }
+    if (
+      this.state.invoices.some((i) => i.id === draft.id) ||
+      this.state.pending.some((p) => p.invoice.id === draft.id)
+    )
+      throw Error(
+        "Documentul este deja confirmat și nu mai poate fi editat ca ciornă.",
+      );
+    const previous = this.state.drafts?.find((d) => d.id === draft.id);
+    if ((previous?.revision ?? 0) !== draft.revision)
+      throw Error("Ciorna s-a modificat. Redeschide documentul.");
+    if (!previous && (this.state.drafts?.length ?? 0) >= 100)
+      throw Error(
+        "Sunt deja 100 de ciorne locale. Confirmă documentele pregătite.",
+      );
+    this.running = true;
+    try {
+      await this.commit({
+        ...this.state,
+        drafts: [
+          ...(this.state.drafts ?? []).filter((d) => d.id !== draft.id),
+          { ...draft, revision: draft.revision + 1 },
+        ],
+      });
+    } finally {
+      this.running = false;
+    }
+  }
+  async confirmDraft(id: string, revision: number) {
+    const draft = this.state.drafts?.find((d) => d.id === id);
+    if (!draft || draft.revision !== revision)
+      throw Error("Ciorna s-a modificat. Verifică din nou documentul.");
+    await this.enqueue(invoiceFromDraft(draft), id);
+  }
+  async enqueue(invoice: Invoice, draftId?: string) {
     if (this.running)
       throw new Error("Sincronizare în curs. Reîncearcă imediat.");
+    this.running = true;
+    try {
+      await this.storeOperation(invoice, draftId);
+    } finally {
+      this.running = false;
+    }
+    await this.sync();
+  }
+  private async storeOperation(invoice: Invoice, draftId?: string) {
     if (this.state.pending.some((p) => p.invoice.id === invoice.id))
       throw new Error(
         "Sincronizează sau rezolvă operațiunea anterioară pentru această factură.",
@@ -89,6 +147,7 @@ export class SyncEngine {
       const next = applyOperation(old, op);
       await this.commit({
         ...this.state,
+        drafts: (this.state.drafts ?? []).filter((d) => d.id !== draftId),
         compliance: {
           ...compliance,
           audit: [
@@ -111,21 +170,32 @@ export class SyncEngine {
         ],
         ledger: [
           ...(this.state.ledger ?? []),
-          {
-            id: op.id,
+          ...journalEntries(
+            old,
+            next,
+            compliance.rules,
+            op.effectiveDate,
+            true,
+          ).map((entry, index) => ({
+            id: index === 0 ? op.id : `${op.id}:${index + 1}`,
             invoiceId: invoice.id,
-            ...journal(old, next, compliance.rules, op.effectiveDate, true),
+            operationId: op.id,
+            lineNo: index + 1,
+            ...entry,
             effectiveDate: op.effectiveDate,
             ruleId: rule.id,
             ruleVersion: rule.version,
-            state: "proposed",
-          },
+            state: "proposed" as const,
+          })),
         ],
       });
       return;
     }
-    await this.commit({ ...this.state, pending: [...this.state.pending, op] });
-    await this.sync();
+    await this.commit({
+      ...this.state,
+      drafts: (this.state.drafts ?? []).filter((d) => d.id !== draftId),
+      pending: [...this.state.pending, op],
+    });
   }
   async saveCatalog(entry: CatalogEntry, reason: string) {
     if (this.running) throw Error("Sincronizare în curs. Reîncearcă imediat.");

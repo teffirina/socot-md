@@ -1,4 +1,5 @@
 "use client";
+import { parseAllocation, postingGroup } from "../lib/posting-plan";
 import AccountsPanel from "./accounts-panel";
 import { useEffect, useState } from "react";
 import { can } from "../lib/permissions";
@@ -30,7 +31,7 @@ export default function CompliancePanel({
     >(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [tab, setTab] = useState("Reguli"),
+    [tab, setTab] = useState("Jurnal"),
     [reason, setReason] = useState("");
   const data = demo ? (snapshot.compliance ?? initialCompliance()) : remote;
   const ledger = demo ? snapshot.ledger : remote?.ledger;
@@ -87,6 +88,7 @@ export default function CompliancePanel({
         kind: f.get("kind"),
         version: Number(f.get("version")),
         name: f.get("name"),
+        allocations: parseAllocation(String(f.get("allocations") ?? "")),
         debit: f.get("debit"),
         credit: f.get("credit"),
         validFrom: f.get("validFrom"),
@@ -152,7 +154,9 @@ export default function CompliancePanel({
     await run(async () => {
       requireReason();
       if (demo) {
-        const entry = ledger!.find((j) => j.id === id)!;
+        const group = postingGroup(ledger!, id);
+        const entry = group[0];
+        const ids = new Set(group.map((e) => e.id));
         if (
           data!.periods.some(
             (p) => p.closed && entry.effectiveDate?.startsWith(p.month),
@@ -162,15 +166,15 @@ export default function CompliancePanel({
         await engine.commit({
           ...snapshot,
           ledger: ledger!.map((j) =>
-            j.id === id ? { ...j, state: "posted" } : j,
+            ids.has(j.id) ? { ...j, state: "posted" } : j,
           ),
           compliance: {
             ...data!,
             audit: [
               {
                 id: crypto.randomUUID(),
-                action: "journal.posted",
-                objectId: id,
+                action: "journal.group.posted",
+                objectId: entry.operationId ?? id,
                 reason,
                 actor: "Utilizator demo",
                 at: new Date().toISOString(),
@@ -311,7 +315,7 @@ export default function CompliancePanel({
                 {data.rules.map((r) => (
                   <article key={r.id}>
                     <strong>{r.name}</strong>
-                    <p>
+                    <div>
                       v{r.version} ·{" "}
                       {
                         {
@@ -321,8 +325,17 @@ export default function CompliancePanel({
                           payment: "Plată furnizor",
                         }[r.kind]
                       }{" "}
-                      · D {r.debit} / C {r.credit}
-                    </p>
+                      {r.allocations ? "· Repartizare pe articole" : `· D ${r.debit} / C ${r.credit}`}
+                      {r.allocations && (
+                        <ul>
+                          {r.allocations.map((a, i) => (
+                            <li key={i}>
+                              D {a.debit} / C {a.credit} · {a.weight / 100}%
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                     <small>
                       {r.validFrom} — {r.validTo ?? "până la înlocuire"} ·{" "}
                       {r.status === "approved" ? "Aprobată" : "Ciornă"}
@@ -377,11 +390,19 @@ export default function CompliancePanel({
                       </label>
                       <label>
                         Debit
-                        <input name="debit" required pattern="[0-9]{3,8}" />
+                        <input
+                          name="debit"
+                          required
+                          pattern="[0-9]{3,8}([.][0-9]{1,4}){0,3}"
+                        />
                       </label>
                       <label>
                         Credit
-                        <input name="credit" required pattern="[0-9]{3,8}" />
+                        <input
+                          name="credit"
+                          required
+                          pattern="[0-9]{3,8}([.][0-9]{1,4}){0,3}"
+                        />
                       </label>
                       <label>
                         Valabilă de la
@@ -392,6 +413,20 @@ export default function CompliancePanel({
                         <input name="validTo" type="date" />
                       </label>
                     </div>
+                    <label>
+                      Repartizare pe articole (opțional)
+                      <textarea
+                        name="allocations"
+                        rows={4}
+                        placeholder={"713.1;521.1;60\n713.2;521.1;40"}
+                      />
+                      <small>
+                        Debit;Credit;Procent, un rând per articol, în total
+                        100%. Înlocuiește perechea simplă de mai sus.
+                        Repartizare a sumei, fără calcul automat de TVA sau
+                        costuri de stoc.
+                      </small>
+                    </label>
                     <label>
                       Sursa și referința verificată
                       <input
@@ -453,7 +488,8 @@ export default function CompliancePanel({
             <>
               <p>
                 Articolele noi sunt propuse pentru verificare. Postarea cere
-                confirmare explicită.
+                confirmare explicită și aprobă împreună toate articolele
+                aceleiași operațiuni.
               </p>
               <div className="tablewrap">
                 <table>
@@ -472,6 +508,12 @@ export default function CompliancePanel({
                       <tr key={j.id}>
                         <td>
                           {j.invoiceId.slice(0, 8)}
+                          {j.operationId && (
+                            <small>
+                              Grup {j.operationId.slice(0, 8)} · rând{" "}
+                              {j.lineNo ?? 1}
+                            </small>
+                          )}
                           <small>
                             {j.effectiveDate ?? "document demonstrativ vechi"}
                           </small>
@@ -490,7 +532,7 @@ export default function CompliancePanel({
                               }
                               onClick={() => post(j.id)}
                             >
-                              Aprobă și postează
+                              Aprobă și postează grupul
                             </button>
                           ) : j.state === "posted" ? (
                             "Postat"

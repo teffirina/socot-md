@@ -52,7 +52,7 @@ export const demoCompany: Company = {
 };
 export const accountSchema = z
   .object({
-    code: z.string().regex(/^\d{3,8}$/),
+    code: z.string().regex(/^\d{3,8}(?:\.\d{1,4}){0,3}$/),
     name: z.string().trim().min(2).max(150),
     class: z.number().int().min(1).max(9),
     type: z.enum([
@@ -66,7 +66,7 @@ export const accountSchema = z
     balanceNature: z.enum(["debit", "credit", "mixed"]),
     currency: z.enum(["MDL", "EUR", "USD"]),
     analytics: z.array(z.string().max(40)).max(10),
-    parentCode: z.string().max(8).nullable(),
+    parentCode: z.string().regex(/^\d{3,8}(?:\.\d{1,4}){0,3}$/).nullable(),
     validFrom: z.iso.date(),
     validTo: z.iso.date().nullable(),
     source: z.string().min(10).max(500),

@@ -1,5 +1,6 @@
 "use client";
 import PartnerFields from "./partner-fields";
+import { documentAmount } from "../lib/document-workflow";
 import { useState } from "react";
 import { invoiceSchema, totals, type Invoice } from "../lib/domain";
 import type { Snapshot } from "../lib/storage";
@@ -12,10 +13,12 @@ export default function ExpensesPanel({
   snapshot,
   engine,
   writable,
+  onDraft,
 }: {
   snapshot: Snapshot;
   engine: SyncEngine;
   writable: boolean;
+  onDraft: () => void;
 }) {
   const [form, setForm] = useState(false),
     [payment, setPayment] = useState<Invoice | null>(null),
@@ -41,7 +44,7 @@ export default function ExpensesPanel({
     setBusy(true);
     const data = new FormData(e.currentTarget);
     try {
-      const amount = Math.round(Number(data.get("amount")) * 100);
+      const amount = documentAmount(String(data.get("amount")));
       const doc = payment
         ? invoiceSchema.parse({ ...payment, paid: payment.paid + amount })
         : invoiceSchema.parse({
@@ -58,9 +61,22 @@ export default function ExpensesPanel({
           });
       if (!Number.isSafeInteger(amount) || amount <= 0)
         throw new Error("Introdu o sumă pozitivă.");
-      await engine.enqueue(doc);
+      if (payment) await engine.enqueue(doc);
+      else
+        await engine.saveDraft({
+          id: doc.id,
+          kind: "expense",
+          customer: doc.customer,
+          category: doc.category ?? "",
+          partnerId: doc.partnerId ?? null,
+          contractId: doc.contractId ?? null,
+          date: doc.date,
+          total: doc.total,
+          revision: 0,
+        });
       setForm(false);
       setPayment(null);
+      if (!payment) onDraft();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -326,7 +342,7 @@ export default function ExpensesPanel({
                     ? "Se salvează…"
                     : payment
                       ? "Confirmă plata"
-                      : "Salvează cheltuiala"}
+                      : "Salvează ciorna"}
                 </button>
               </div>
             </form>

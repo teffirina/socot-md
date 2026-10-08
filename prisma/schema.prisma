@@ -55,7 +55,9 @@ model Journal {
  id String @id @default(uuid())
  companyId String
  invoiceId String
- operationId String @unique
+ operationId String
+ lineNo Int @default(1)
+ @@unique([operationId,lineNo])
  debit String
  credit String
  amount Int
@@ -71,6 +73,7 @@ model Audit {
  createdAt DateTime @default(now())
 }
 model AccountingRule {
+ allocations Json?
  id String @id
  companyId String
  kind String

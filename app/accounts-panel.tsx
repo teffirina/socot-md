@@ -152,7 +152,11 @@ export default function AccountsPanel({
         <form onSubmit={save}>
           <label>
             Cod
-            <input name="code" pattern="[0-9]{3,8}" required />
+            <input
+              name="code"
+              pattern="[0-9]{3,8}([.][0-9]{1,4}){0,3}"
+              required
+            />
           </label>
           <label>
             Denumire

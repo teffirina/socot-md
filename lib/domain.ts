@@ -1,4 +1,5 @@
 import { demoRules, selectRule, type Rule } from "./compliance";
+import { allocatePosting } from "./posting-plan";
 import { z } from "zod";
 export const invoiceSchema = z
   .object({
@@ -60,7 +61,7 @@ export function totals(invoices: Invoice[]) {
     { sales: 0, paid: 0, due: 0 },
   );
 }
-export function journal(
+export function journalEntries(
   previous: Invoice | null,
   next: Invoice,
   rules: Rule[] = demoRules,
@@ -75,7 +76,9 @@ export function journal(
   );
   const amount = previous ? next.paid - previous.paid : next.total;
   if (amount <= 0) throw new Error("Încasarea trebuie să fie pozitivă.");
-  return { debit: rule.debit, credit: rule.credit, amount };
+  return rule.allocations
+    ? allocatePosting(amount, rule.allocations)
+    : [{ debit: rule.debit, credit: rule.credit, amount }];
 }
 
 export function operationKind(doc: Invoice, payment: boolean) {
@@ -86,4 +89,12 @@ export function operationKind(doc: Invoice, payment: boolean) {
     : payment
       ? "receipt"
       : "sale";
+}
+
+// Compatibility for callers expecting exactly one entry; never discard extra lines.
+export function journal(...args: Parameters<typeof journalEntries>) {
+  const entries = journalEntries(...args);
+  if (entries.length !== 1)
+    throw Error("Operațiunea conține mai multe articole contabile.");
+  return entries[0];
 }

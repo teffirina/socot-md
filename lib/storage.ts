@@ -2,7 +2,9 @@ import type { CatalogEntry, CatalogPending } from "./catalog";
 import type { Company, Account } from "./company";
 import type { ComplianceState } from "./compliance";
 import type { Invoice, Pending } from "./domain";
+import type { DocumentDraft } from "./document-workflow";
 export type Snapshot = {
+  drafts?: DocumentDraft[];
   invoices: Invoice[];
   catalog?: CatalogEntry[];
   catalogPending?: CatalogPending[];
@@ -13,6 +15,8 @@ export type Snapshot = {
   ledger?: {
     id: string;
     invoiceId: string;
+    operationId?: string;
+    lineNo?: number;
     debit: string;
     credit: string;
     amount: number;

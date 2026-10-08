@@ -17,7 +17,7 @@ import { z } from "zod";
 import {
   operationSchema,
   applyOperation,
-  journal,
+  journalEntries,
   operationKind,
 } from "../lib/domain";
 const db = new PrismaClient();
@@ -231,17 +231,24 @@ app.post("/api/operations", async (req, res) => {
           result: next,
         },
       });
-      await tx.journal.create({
-        data: {
+      await tx.journal.createMany({
+        data: journalEntries(
+          current,
+          next,
+          rules,
+          effectiveDate,
+          allowDemo,
+        ).map((entry, index) => ({
           companyId: user.companyId,
           invoiceId: next.id,
           operationId: op.id,
-          ...journal(current, next, rules, effectiveDate, allowDemo),
+          ...entry,
+          lineNo: index + 1,
           ruleId: rule.id,
           ruleVersion: rule.version,
           effectiveDate,
           state: "proposed",
-        },
+        })),
       });
       await tx.audit.create({
         data: {

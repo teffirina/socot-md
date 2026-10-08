@@ -1,3 +1,4 @@
+import { postingGroup } from "../lib/posting-plan";
 import { ledgerReport, intervalSchema } from "../lib/ledger-report";
 import { can, type Permission } from "../lib/permissions";
 import { Router } from "express";
@@ -20,12 +21,10 @@ export function complianceRouter(db: PrismaClient) {
       take: 100001,
     });
     if (rows.length > 100000) {
-      res
-        .status(422)
-        .json({
-          error:
-            "Istoricul depășește limita raportului. Raportul nu a fost generat parțial.",
-        });
+      res.status(422).json({
+        error:
+          "Istoricul depășește limita raportului. Raportul nu a fost generat parțial.",
+      });
       return;
     }
     res.json(ledgerReport(rows, from, to));
@@ -44,6 +43,31 @@ export function complianceRouter(db: PrismaClient) {
       return;
     }
     res.json(invoice);
+  });
+  router.post("/document-movements", async (req, res) => {
+    if (!can(res.locals.user.role, "journal.read")) {
+      res.status(403).json({ error: "Nu ai acces la registrele contabile." });
+      return;
+    }
+    const { id } = z.object({ id: z.uuid() }).strict().parse(req.body);
+    const companyId = res.locals.user.companyId;
+    const invoice = await db.invoice.findFirst({ where: { id, companyId } });
+    if (!invoice) {
+      res.status(404).json({ error: "Documentul nu este disponibil." });
+      return;
+    }
+    const entries = await db.journal.findMany({
+      where: { invoiceId: id, companyId },
+      orderBy: [{ effectiveDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+      take: 10001,
+    });
+    if (entries.length > 10000) {
+      res.status(422).json({
+        error: "Prea multe mișcări. Lista nu a fost afișată parțial.",
+      });
+      return;
+    }
+    res.json({ entries });
   });
   router.get("/compliance", async (_req, res) => {
     if (!can(res.locals.user.role, "journal.read")) {
@@ -244,16 +268,23 @@ export function complianceRouter(db: PrismaClient) {
         },
       });
       if (period?.closed) throw new Error("Perioada este închisă.");
-      await tx.journal.update({
-        where: { id },
+      const entries = await tx.journal.findMany({
+        where: { companyId: user.companyId, operationId: entry.operationId },
+      });
+      const group = postingGroup(entries, id);
+      await tx.journal.updateMany({
+        where: {
+          companyId: user.companyId,
+          id: { in: group.map((e) => e.id) },
+        },
         data: { state: "posted", approvedBy: user.id },
       });
       await tx.complianceAudit.create({
         data: {
           companyId: user.companyId,
           actor: user.id,
-          action: "journal.posted",
-          objectId: id,
+          action: "journal.group.posted",
+          objectId: entry.operationId,
           reason,
         },
       });

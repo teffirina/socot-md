@@ -17,13 +17,17 @@ export default function CatalogPanel({
   engine,
   demo,
   role,
+  initialKind = "partner",
 }: {
   snapshot: Snapshot;
   engine: SyncEngine;
   demo: boolean;
   role: string;
+  initialKind?: CatalogKind;
 }) {
-  const [kind, setKind] = useState<CatalogKind>("partner"),
+  const [kind, setKind] = useState<CatalogKind>(
+      demo || canReadCatalog(role, initialKind) ? initialKind : "partner",
+    ),
     [query, setQuery] = useState(""),
     [edit, setEdit] = useState<CatalogEntry | null>(null),
     [error, setError] = useState(""),

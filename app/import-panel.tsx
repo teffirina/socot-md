@@ -4,6 +4,7 @@ import { readValue, writeValue, type Snapshot } from "../lib/storage";
 import type { SyncEngine } from "../lib/sync";
 import {
   calculate,
+  exportWorkbook,
   checkXlsxArchive,
   duplicateKey,
   MAX_COLS,
@@ -16,6 +17,7 @@ import {
 } from "../lib/workbook";
 type Batch = {
   name: string;
+  manual?: boolean;
   original: string;
   mime: string;
   hash: string;
@@ -59,10 +61,20 @@ export default function ImportPanel({
     [filter, setFilter] = useState(""),
     [original, setOriginal] = useState(false),
     [review, setReview] = useState(false);
+  const [savedTables, setSavedTables] = useState<
+    { hash: string; name: string }[]
+  >([]);
   const lock = useRef(false);
   const key = `${engine.scope}:import-workspace-v1`;
   useEffect(() => {
     let live = true;
+    readValue<{ hash: string; name: string }[]>(`${key}:index`)
+      .then((items) => {
+        if (live) setSavedTables(items ?? []);
+      })
+      .catch((e) => {
+        if (live) setError(String(e));
+      });
     readValue<Batch>(key)
       .then((b) => {
         if (live) {
@@ -97,6 +109,65 @@ export default function ImportPanel({
     await writeValue(key, next);
     setBatch(next);
   }
+  async function archiveCurrent() {
+    if (!batch) return;
+    const items =
+      (await readValue<{ hash: string; name: string }[]>(`${key}:index`)) ?? [];
+    if (!items.some((i) => i.hash === batch.hash) && items.length >= 20)
+      throw Error("Limita este de 20 de tabele salvate local.");
+    await writeValue(`${key}:table:${batch.hash}`, batch);
+    const next = [
+      ...items.filter((i) => i.hash !== batch.hash),
+      { hash: batch.hash, name: batch.name },
+    ];
+    await writeValue(`${key}:index`, next);
+    setSavedTables(next);
+  }
+  async function openTable(hash: string) {
+    const stored = await readValue<Batch>(`${key}:table:${hash}`);
+    if (!stored) throw Error("Tabelul salvat nu a putut fi găsit.");
+    await archiveCurrent();
+    await save(stored);
+    setReview(false);
+    setOriginal(false);
+    setFilter("");
+  }
+  async function createManual() {
+    await archiveCurrent();
+    const grid: Grid = [
+      ["Partener", "Data", "Total", "Descriere", "Cantitate", "Preț unitar"],
+      ["", new Date().toISOString().slice(0, 10), "=E2*F2", "", "1", ""],
+    ];
+    const hash = await digest(crypto.randomUUID());
+    await save({
+      name: "Document Socot",
+      manual: true,
+      original: "",
+      mime: "",
+      hash,
+      sheet: "Document",
+      grid,
+      originalGrid: grid.map((r) => [...r]),
+      ids: grid.map(() => crypto.randomUUID()),
+      mapping: { customer: 0, date: 1, total: 2 },
+      kind: "expense",
+      frozen: false,
+      sent: [],
+    });
+    setOriginal(false);
+    setReview(false);
+    setFilter("");
+  }
+  async function exportExcel() {
+    if (!batch) return;
+    const bytes = await exportWorkbook(batch.grid);
+    download(
+      new Blob([new Uint8Array(bytes)], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      "Socot-tabel.xlsx",
+    );
+  }
   async function importFile(file: File) {
     if (file.size > 512_000)
       throw new Error("Pentru această versiune: maximum 500 KB per fișier.");
@@ -107,7 +178,7 @@ export default function ImportPanel({
     if (/\.xlsx$/i.test(file.name)) {
       checkXlsxArchive(bytes);
       const ExcelJS = await import("exceljs");
-      const book = new ExcelJS.Workbook();
+      const book = new (ExcelJS.default ?? ExcelJS).Workbook();
       await book.xlsx.load(bytes);
       if (book.worksheets.length !== 1)
         throw new Error(
@@ -226,7 +297,10 @@ export default function ImportPanel({
   return (
     <section className="panel import-panel">
       <h2>Spațiu de lucru</h2>
-      <p>1. Importă → 2. Prelucrează → 3. Verifică → 4. Confirmă în evidență</p>
+      <p>
+        1. Creează sau importă → 2. Prelucrează → 3. Verifică → 4. Confirmă în
+        evidență
+      </p>
       <p>
         Datele de aici nu modifică soldurile până la confirmare. Originalul și
         tabelul sunt păstrate local, în profilul curent; nu sunt încă arhivate
@@ -237,10 +311,49 @@ export default function ImportPanel({
           {error}
         </p>
       )}
+      {ready && (
+        <div className="import-actions">
+          {batch && (
+            <button
+              disabled={busy || !writable}
+              onClick={() => void run(createManual)}
+            >
+              ＋ Tabel nou
+            </button>
+          )}
+          {savedTables
+            .filter((t) => t.hash !== batch?.hash)
+            .map((t) => (
+              <button
+                key={t.hash}
+                disabled={busy || !writable}
+                onClick={() => void run(() => openTable(t.hash))}
+              >
+                Deschide: {t.name}
+              </button>
+            ))}
+          {batch && (
+            <small>
+              La crearea altui tabel, acesta se păstrează local și poate fi
+              redeschis.
+            </small>
+          )}
+        </div>
+      )}
       {!ready ? (
         <p>Se încarcă spațiul salvat…</p>
       ) : !batch ? (
         <>
+          <button
+            disabled={busy || !writable}
+            onClick={() => void run(createManual)}
+          >
+            ＋ Tabel nou — introducere manuală
+          </button>
+          <p>
+            Scrie direct în celule, folosește formule și pregătește vânzări sau
+            cheltuieli. Nu ai nevoie de Excel instalat.
+          </p>
           <label>
             Importă XLSX / CSV / TSV{" "}
             <input
@@ -263,8 +376,23 @@ export default function ImportPanel({
       ) : (
         <>
           <h3>
-            {batch.name} · {batch.sheet}
+            {batch.name} · {batch.manual ? "Creat manual" : batch.sheet}
           </h3>
+          <label>
+            Denumirea documentului
+            <input
+              key={batch.hash}
+              aria-label="Denumirea documentului"
+              defaultValue={batch.name}
+              maxLength={120}
+              disabled={busy || batch.frozen || !writable}
+              onBlur={(e) => {
+                const name = e.target.value.trim();
+                if (name && name !== batch.name)
+                  void run(() => save({ ...batch, name }));
+              }}
+            />
+          </label>
           <p>
             {batch.grid.length - 1} rânduri ·{" "}
             {batch.frozen
@@ -273,16 +401,22 @@ export default function ImportPanel({
             · SHA-256: <code>{batch.hash.slice(0, 16)}…</code>
           </p>
           <div className="import-actions">
-            <button
-              onClick={() => {
-                const a = Uint8Array.from(atob(batch.original), (c) =>
-                  c.charCodeAt(0),
-                );
-                download(new Blob([a], { type: batch.mime }), batch.name);
-              }}
-            >
-              Descarcă originalul
+            <button disabled={busy} onClick={() => void run(exportExcel)}>
+              Descarcă Excel (.xlsx)
             </button>
+            <button onClick={() => window.print()}>Imprimă / PDF</button>
+            {!batch.manual && (
+              <button
+                onClick={() => {
+                  const a = Uint8Array.from(atob(batch.original), (c) =>
+                    c.charCodeAt(0),
+                  );
+                  download(new Blob([a], { type: batch.mime }), batch.name);
+                }}
+              >
+                Descarcă originalul
+              </button>
+            )}
             <button
               onClick={() =>
                 download(
@@ -295,9 +429,11 @@ export default function ImportPanel({
             >
               Descarcă dosarul de lucru
             </button>
-            <button onClick={() => setOriginal(!original)}>
-              {original ? "Arată datele prelucrate" : "Arată originalul"}
-            </button>
+            {!batch.manual && (
+              <button onClick={() => setOriginal(!original)}>
+                {original ? "Arată datele prelucrate" : "Arată originalul"}
+              </button>
+            )}
             <button onClick={() => setReview(!review)}>
               {review ? "Înapoi la tabel" : "Verifică operațiunile"}
             </button>
@@ -352,6 +488,54 @@ export default function ImportPanel({
               ))}
             </div>
           )}
+          {!original && !review && (
+            <div className="import-actions">
+              <button
+                disabled={
+                  busy ||
+                  batch.frozen ||
+                  !writable ||
+                  batch.grid.length >= MAX_ROWS
+                }
+                onClick={() =>
+                  void run(() =>
+                    save({
+                      ...batch,
+                      grid: [...batch.grid, Array(width).fill("")],
+                      ids: [...batch.ids, crypto.randomUUID()],
+                    }),
+                  )
+                }
+              >
+                ＋ Rând
+              </button>
+              <button
+                disabled={
+                  busy || batch.frozen || !writable || width >= MAX_COLS
+                }
+                onClick={() =>
+                  void run(() =>
+                    save({
+                      ...batch,
+                      grid: batch.grid.map((row, r) => [
+                        ...Array.from(
+                          { length: width },
+                          (_, c) => row[c] ?? "",
+                        ),
+                        r === 0 ? `Coloana ${width + 1}` : "",
+                      ]),
+                    }),
+                  )
+                }
+              >
+                ＋ Coloană
+              </button>
+              <span>
+                Salvare locală la ieșirea din celulă. Primul rând conține
+                denumirile coloanelor.
+              </span>
+            </div>
+          )}
           <label>
             Filtrează rândurile{" "}
             <input value={filter} onChange={(e) => setFilter(e.target.value)} />
@@ -376,7 +560,23 @@ export default function ImportPanel({
                   ) : (
                     Array.from({ length: width }, (_, c) => (
                       <th key={c}>
-                        {String.fromCharCode(65 + c)} · {visibleGrid[0]?.[c]}
+                        {String.fromCharCode(65 + c)} ·{" "}
+                        <input
+                          aria-label={`Antet ${String.fromCharCode(65 + c)}`}
+                          defaultValue={visibleGrid[0]?.[c] ?? ""}
+                          key={`${original}:${visibleGrid[0]?.[c]}`}
+                          readOnly={
+                            original || batch.frozen || !writable || busy
+                          }
+                          maxLength={120}
+                          onBlur={(e) => {
+                            if (e.target.value !== batch.grid[0][c]) {
+                              const grid = batch.grid.map((row) => [...row]);
+                              grid[0][c] = e.target.value;
+                              void run(() => save({ ...batch, grid }));
+                            }
+                          }}
+                        />
                       </th>
                     ))
                   )}
@@ -486,6 +686,9 @@ export default function ImportPanel({
                                 }}
                               />
                               {result && <small>{result}</small>}
+                              <span className="sheet-print-value">
+                                {result || row[c] || ""}
+                              </span>
                             </td>
                           );
                         })}
@@ -504,9 +707,9 @@ export default function ImportPanel({
           <details>
             <summary>Închide spațiul de lucru</summary>
             <p>
-              Descarcă originalul înainte de eliminare. Se elimină numai copia
-              locală și prelucrarea; documentele create păstrează referința
-              sursei.
+              Descarcă dosarul de lucru și tabelul Excel înainte de eliminare.
+              Se elimină numai copia locală și prelucrarea; documentele create
+              păstrează referința sursei.
             </p>
             <button
               disabled={
@@ -516,7 +719,7 @@ export default function ImportPanel({
               }
               onClick={() => void run(() => save(null))}
             >
-              Elimină copia locală a importului
+              Elimină copia locală a tabelului
             </button>
           </details>
         </>

@@ -1,13 +1,17 @@
+import { allocationSchema } from "./posting-plan";
 import { z } from "zod";
 import initialRules from "../config/demo-rules.json";
 export const ruleSchema = z
   .object({
     id: z.string().min(1).max(80),
     kind: z.enum(["sale", "receipt", "expense", "payment"]),
+    allocations: allocationSchema
+      .nullish()
+      .transform((value) => value ?? undefined),
     version: z.number().int().positive(),
     name: z.string().trim().min(3).max(150),
-    debit: z.string().regex(/^\d{3,8}$/),
-    credit: z.string().regex(/^\d{3,8}$/),
+    debit: z.string().regex(/^\d{3,8}(?:\.\d{1,4}){0,3}$/),
+    credit: z.string().regex(/^\d{3,8}(?:\.\d{1,4}){0,3}$/),
     validFrom: z.iso.date(),
     validTo: z.iso.date().nullable(),
     status: z.enum(["draft", "approved"]),

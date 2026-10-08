@@ -164,7 +164,7 @@ export function suggestMapping(header: string[]): Mapping {
   return {
     customer: find(/^(client|furnizor|partener|customer)$/),
     date: find(/^(data|date)$/),
-    total: find(/^(total|suma|amount)$/),
+    total: find(/^(total(?: mdl)?|suma|amount)$/),
   };
 }
 export function prepareRow(
@@ -244,4 +244,31 @@ export function checkXlsxArchive(bytes: ArrayBuffer) {
       view.getUint16(offset + 32, true);
   }
   if (offset !== end) throw new Error("Format ZIP nesuportat.");
+}
+
+export async function exportWorkbook(grid: Grid) {
+    const ExcelJS = await import("exceljs");
+    const book = new (ExcelJS.default ?? ExcelJS).Workbook();
+    const sheet = book.addWorksheet("Socot");
+    grid.forEach((row, r) =>
+      row.forEach((value, c) => {
+        const cell = sheet.getCell(r + 1, c + 1);
+        if (r > 0 && value.startsWith("=")) {
+          cell.value = {
+            formula: value.slice(1),
+            result: calculate(grid, r, c),
+          };
+        } else
+          cell.value =
+            r > 0 && /^(?:0|[1-9]\d*)(?:[.,]\d+)?$/.test(value)
+              ? Number(value.replace(",", "."))
+              : value;
+      }),
+    );
+    sheet.getRow(1).font = { bold: true };
+    sheet.columns.forEach((column) => {
+      column.width = 24;
+    });
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    return new Uint8Array(await book.xlsx.writeBuffer());
 }

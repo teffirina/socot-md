@@ -71,3 +71,21 @@ macOS local 0.4.0: pornire și navigare la Cheltuieli confirmate; cele trei fact
 Salvare SQLite suplimentară: documentul „Socot — test cheltuială SQLite”, 100 MDL, a fost păstrat după închiderea și repornirea aplicației. Repornirea a prezentat temporar o fereastră goală și erori AXError.cannotComplete ale instrumentului de accesibilitate; interfața s-a încărcat ulterior și documentul a fost confirmat. Cauza întârzierii nu este determinată; nu este prezentată ca pornire instantanee.
 
 Actions [35493089979](https://github.com/teffirina/socot-md/actions/runs/35493089979) a trecut integral pentru `cae691d`: API/PostgreSQL, Windows și macOS. Windows: instalare EXE NSIS, pornire 12 secunde și extragere MSI; macOS: DMG și bundle verificate. Semnăturile updater și respingerea pachetelor alterate au trecut pe ambele platforme. Avertismentele de runtime Actions, lipsa notarizării Apple/Authenticode și lipsa canalului public updater rămân valabile.
+
+## Nomenclatoare — Socot 0.5.0
+
+29 teste trecute, TypeScript și export web reușite. Run 35507822532 a trecut API/PostgreSQL și ambele builduri native pentru 31e4e6c. Browser: partener TEST-CAT salvat, păstrat după reîncărcare, selectat în formularul facturii; nu a fost emisă factură suplimentară.
+
+Desktop 0.5.0: cele trei facturi anterioare, total 29.223,05 MDL, au fost confirmate după pornire. Formularul nou s-a blocat în verificarea automată. Eșantionarea procesului a confirmat acces Keychain pe firul principal, în SecKeychainFindGenericPassword. Corecția e28f533 mută local_read/local_write în spawn_blocking, cu serializarea accesului la cheia de criptare. Nu schimbă cheia sau formatul datelor. Verificarea manuală completă după corecție rămâne necesară; nu atribuim toate erorile instrumentului de accesibilitate aplicației.
+
+Limite: 212 cerințe în matrice, majoritatea încă deschise; registrele de referință nu implementează salarizare, stocuri, amortizare sau producție. Semnarea updater nu echivalează cu notarizare Apple ori Authenticode.
+
+## Spațiu de lucru — Socot 0.6.0 (22.09.2026)
+
+Commit aplicație `8bda39d`: 36 teste trecute, TypeScript și export web reușite. PostgreSQL temporar: migrarea provenienței și integrarea API trecute. Importul XLSX real în browser a ignorat rezultatul memorat 999 și a calculat 25 MDL; duplicatul a fost semnalat, editarea a supraviețuit reîncărcării, iar confirmarea a creat o cheltuială demonstrativă de 25 MDL cu sursa păstrată. Datele anterioare nu au fost șterse.
+
+DMG local final 0.6.0: checksum verificat de hdiutil, semnătură ad-hoc verificată, semnătură updater validă și pachet alterat respins. SHA256: `cdcf3191706d90913d813d192ca959d4891d661a3eccd72a2d439614f9860e3d`. Instrucțiuni și limite: [Spațiu de lucru](SPATIU-DE-LUCRU.md).
+
+Importul nu finalizează cele 212 cerințe ale platformei. Originalele sunt locale; arhivarea comună, pozițiile de produse, corecțiile/storno și generarea completă a documentelor fiscale sunt încă de implementat. Testarea manuală completă a interfeței Windows și macOS pentru acest flux rămâne distinctă de verificarea instalatoarelor în CI.
+
+Actions [35757583357](https://github.com/teffirina/socot-md/actions/runs/35757583357) a trecut integral pentru `8bda39d`: API/PostgreSQL și builduri Windows/macOS. EXE NSIS instalat și proces pornit 12 secunde pe Windows; MSI extras cu Socot.exe prezent; DMG și bundle macOS verificate. Semnăturile updater au trecut inclusiv testul de alterare, apoi EXE și MSI descărcate au fost reverificate local. Arhiva pentru coleg, fără cont GitHub: `artifacts/Socot-0.6.0-Testare-Windows.zip` (copie și pe Desktop), cu EXE, semnătură, instrucțiuni, CSV fictiv și checksumuri. Nu conține datele firmei.

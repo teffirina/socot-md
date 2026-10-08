@@ -119,7 +119,7 @@ async fn api_request(path: String, body: Option<Value>) -> Result<Value, String>
         "/invoices",
         "/operations",
         "/health",
-        "/compliance", "/company", "/accounts", "/ledger-report", "/source-document",
+        "/compliance", "/company", "/accounts", "/ledger-report", "/source-document", "/document-movements",
         "/rules",
         "/rules/approve",
         "/periods",

@@ -1,6 +1,6 @@
 {
   "name": "socot",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
@@ -21,6 +21,14 @@
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-process": "^2.0.0",
     "@tauri-apps/plugin-updater": "^2.0.0",
+    "@univerjs/core": "1.0.3",
+    "@univerjs/preset-sheets-conditional-formatting": "1.0.3",
+    "@univerjs/preset-sheets-core": "1.0.3",
+    "@univerjs/preset-sheets-data-validation": "1.0.3",
+    "@univerjs/preset-sheets-filter": "1.0.3",
+    "@univerjs/preset-sheets-find-replace": "1.0.3",
+    "@univerjs/preset-sheets-sort": "1.0.3",
+    "@univerjs/presets": "1.0.3",
     "bcryptjs": "^3.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
