@@ -1,8 +1,11 @@
 "use client";
 import {
   calculateDocumentLines,
+  lineFromCatalog,
   type DocumentLine,
 } from "../lib/document-lines";
+import { useState } from "react";
+import type { CatalogEntry } from "../lib/catalog";
 const money = (amount: number) =>
   (amount / 100).toLocaleString("ro-MD", {
     minimumFractionDigits: 2,
@@ -12,11 +15,14 @@ export default function DocumentLinesEditor({
   lines,
   onChange,
   readonly = false,
+  catalog = [],
 }: {
   lines: DocumentLine[];
   onChange?: (lines: DocumentLine[]) => void;
   readonly?: boolean;
+  catalog?: CatalogEntry[];
 }) {
+  const [selectionError, setSelectionError] = useState("");
   let result: ReturnType<typeof calculateDocumentLines> | undefined,
     error = "";
   try {
@@ -27,7 +33,15 @@ export default function DocumentLinesEditor({
   const update = (id: string, field: keyof DocumentLine, value: string) =>
     onChange?.(
       lines.map((line) =>
-        line.id === id ? { ...line, [field]: value } : line,
+        line.id === id
+          ? {
+              ...line,
+              [field]: value,
+              ...(["description", "unit", "category"].includes(field)
+                ? { itemId: undefined }
+                : {}),
+            }
+          : line,
       ),
     );
   return (
@@ -36,16 +50,54 @@ export default function DocumentLinesEditor({
       <p className="footnote">
         Pregătire în ciornă. TVA se introduce explicit și trebuie verificat
         pentru operațiunea respectivă. Rotunjire la bani pe fiecare rând;
-        cantități cu până la trei zecimale.
+        cantități cu până la trei zecimale. Reducerea se aplică valorii rândului
+        în modul de preț ales, înainte de calculul TVA.
       </p>
+      {!readonly && (
+        <label>
+          Adaugă din nomenclator
+          <select
+            value=""
+            disabled={lines.length >= 200}
+            onChange={(e) => {
+              setSelectionError("");
+              try {
+                onChange?.([
+                  ...lines,
+                  lineFromCatalog(e.target.value, catalog, crypto.randomUUID()),
+                ]);
+              } catch (error) {
+                setSelectionError(
+                  error instanceof Error ? error.message : String(error),
+                );
+              }
+            }}
+          >
+            <option value="">Alege un produs, material sau serviciu…</option>
+            {catalog
+              .filter((e) => e.kind === "item" && e.active)
+              .map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.code} · {e.name}
+                </option>
+              ))}
+          </select>
+        </label>
+      )}
+      {selectionError && (
+        <p className="error" role="alert">
+          {selectionError}
+        </p>
+      )}
       <div className="tablewrap">
-        <table style={{ minWidth: readonly ? 720 : 1120 }}>
+        <table style={{ minWidth: readonly ? 820 : 1240 }}>
           <thead>
             <tr>
               <th>Denumire / tip</th>
               <th>Unitate</th>
               <th>Cantitate</th>
               <th>Preț MDL</th>
+              <th>Reducere %</th>
               <th>TVA % / preț</th>
               <th>Fără TVA</th>
               <th>TVA</th>
@@ -96,13 +148,14 @@ export default function DocumentLinesEditor({
                     ["unit", "Unitate"],
                     ["quantity", "Cantitate"],
                     ["price", "Preț"],
+                    ["discount", "Reducere"],
                     ["vat", "TVA"],
                   ] as const
                 ).map(([field, label]) => (
                   <td key={field}>
                     {readonly ? (
                       <>
-                        {line[field]}
+                        {line[field] ?? "0"}
                         {field === "vat" && (
                           <small>
                             {line.priceMode === "net"
@@ -115,7 +168,7 @@ export default function DocumentLinesEditor({
                       <>
                         <input
                           aria-label={`${label} poziția ${index + 1}`}
-                          value={line[field]}
+                          value={line[field] ?? "0"}
                           disabled={readonly}
                           inputMode={field === "unit" ? "text" : "decimal"}
                           onChange={(e) =>
@@ -144,6 +197,20 @@ export default function DocumentLinesEditor({
                 <td>{result ? money(result.rows[index].total) : "—"}</td>
                 {!readonly && (
                   <td>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={lines.length >= 200}
+                      onClick={() =>
+                        onChange?.([
+                          ...lines.slice(0, index + 1),
+                          { ...line, id: crypto.randomUUID() },
+                          ...lines.slice(index + 1),
+                        ])
+                      }
+                    >
+                      Copiază rândul {index + 1}
+                    </button>
                     <button
                       type="button"
                       className="secondary"

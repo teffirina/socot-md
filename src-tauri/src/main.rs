@@ -110,6 +110,9 @@ fn api_url() -> Result<String, String> {
 #[tauri::command]
 async fn api_request(path: String, body: Option<Value>) -> Result<Value, String> {
     if ![
+        "/ai/status",
+        "/ai/search",
+        "/ai/proposal",
         "/login",
         "/catalog",
         "/legislation/search",

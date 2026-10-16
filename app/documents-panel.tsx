@@ -623,6 +623,7 @@ export default function DocumentsPanel({
               </div>
               {editing.lines ? (
                 <DocumentLinesEditor
+                  catalog={snapshot.catalog ?? []}
                   lines={editing.lines}
                   onChange={(lines) => setEditing({ ...editing, lines })}
                 />

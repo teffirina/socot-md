@@ -101,3 +101,13 @@ Socot: ciornele pot conține până la 200 de poziții (produse/servicii), denum
 LIMITĂ EXPLICITĂ: aceasta este pregătire locală, nu contabilizare TVA. invoiceFromDraft respinge ciornele cu poziții până la implementarea înregistrării pe linii, analiticelor și bazelor net/TVA/cost. Nu se elimină liniile la confirmare și nu se înregistrează totalul drept cheltuială/venit simplu. Nu există încă emitere de factură fiscală din aceste ciorne.
 
 Verificare: 66 teste trecute. UI: ciornă separată de test „Socot Test poziții TVA”, 2 × 1 250 MDL cu TVA inclusă 20% introdusă explicit; net 2 083,33, TVA 416,67, total 2 500. Salvare reușită, zero operațiuni în coadă; confirmarea contabilă este blocată explicit. Testele verifică și redeschiderea datelor incomplete, fără total vechi.
+
+## 13 octombrie 2026 — pregătirea pozițiilor de cumpărare/vânzare
+
+- Selector de articole active din nomenclator: copiază denumirea, tipul și codul unității de măsură; referința articolului și valorile afișate se păstrează în ciornă. Modificarea manuală a denumirii/tipului/unității detașează referința. Modificările ulterioare din nomenclator nu rescriu documentul.
+- Reducere procentuală pe rând, 0–100%, cu cel mult două zecimale. Valoarea cantitate × preț se rotunjește la bani, apoi reducerea se rotunjește și se scade în modul de preț selectat; ulterior se calculează/extrage TVA. Ciornele vechi fără reducere păstrează calculul anterior. Aceasta este convenția de calcul a ciornei, nu o regulă fiscală certificată.
+- Copierea poziției produce identificator nou și păstrează datele editabile; maximum 200 de poziții. Articolele/unitățile arhivate nu sunt selectabile pentru rânduri noi.
+- TVA rămâne explicită pentru articolul ales; nu se deduce o cotă din nomenclator. Prețul se introduce manual.
+- Limita existentă rămâne: documentele cu poziții nu se postează încă, nu produc stocuri, articole TVA sau declarații. Nu s-a generat un installer nou pentru aceste modificări.
+- Verificare: 69 de teste trecute și TypeScript fără erori în copia curată a proiectului; include reduceri net/brut, rotunjire la bani, input invalid, compatibilitate ciorne vechi și referințe la articole.
+- Compilare web reușită. Verificare în browser la 127.0.0.1:3002: două rânduri de 100 MDL, reducere 10%, TVA introdusă 20% → net 180, TVA 36, total 216 MDL; copiere, salvare și reîncărcare confirmate. Captură: `artifacts/document-lines-20261013/reduceri.png`. Datele de test rămân numai în profilul demo de pe portul 3002.

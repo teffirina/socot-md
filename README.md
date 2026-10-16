@@ -93,3 +93,7 @@ Testul de integrare refuză o bază care nu se numește `socot_test`. La final g
 Pentru producție sunt necesare găzduire autorizată, TLS, backup și restaurare testate, monitorizare, rotația secretelor, politici de acces și validarea contabilă. Desktopul nu conține credențiale PostgreSQL.
 
 Documentație suplimentară: [arhitectură](docs/ARHITECTURA.md), [catalog și matrice document–registru–raport](docs/CATALOG-DOCUMENTE.md), [securitate](docs/SECURITATE.md).
+
+## Asistent AI
+
+Căutare de documente în română și previzualizare Dt/Ct cu reguli aprobate, fără postare automată. Activare pe server cu `OPENAI_API_KEY`; vezi [ghidul de configurare și limitele funcționale](docs/ASISTENT-AI.md).

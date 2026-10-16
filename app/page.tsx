@@ -1,4 +1,5 @@
 "use client";
+import AiPanel from "./ai-panel";
 import SocotSheetsPanel from "./socot-sheets-panel";
 import DocumentsPanel from "./documents-panel";
 import ModuleWorkspace from "./module-workspace";
@@ -466,7 +467,14 @@ export default function Page() {
           {[
             {
               label: "SPAȚIUL MEU",
-              items: ["Acasă", "Documente", "Spațiu de lucru"],
+              items: [
+                "Acasă",
+                "Documente",
+                "Spațiu de lucru",
+                ...(demo || can(session.role, "invoice.read")
+                  ? ["Asistent AI"]
+                  : []),
+              ],
             },
             {
               label: "ACTIVITATE",
@@ -518,6 +526,7 @@ export default function Page() {
                         (
                           {
                             Acasă: "◫",
+                            "Asistent AI": "✦",
                             Documente: "▤",
                             "Spațiu de lucru": "▦",
                             Contabilitate: "≋",
@@ -608,6 +617,7 @@ export default function Page() {
                     Întreprindere:
                       "Datele firmei, contactele și politica contabilă.",
                     Setări: "Conexiune, stocare locală și actualizări.",
+                    "Asistent AI": "Caută documente și verifică propunerile contabile.",
                     Nomenclatoare:
                       "Date de referință comune pentru documentele firmei.",
                   } as Record<string, string>
@@ -964,6 +974,9 @@ export default function Page() {
               journalAccess={demo || can(session.role, "journal.read")}
               navigate={setView}
             />
+          )}
+          {view === "Asistent AI" && (
+            <AiPanel key={`${demo}-${session.companyId}-${session.role}`} demo={demo} role={session.role} navigate={setView} />
           )}
           {view === "Spațiu de lucru" && (
             <SocotSheetsPanel

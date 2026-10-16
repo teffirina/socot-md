@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CatalogEntry } from "./catalog";
 // Numeric input is stored as text while a draft is edited, avoiding silent rounding.
 export const documentLineSchema = z
   .object({
@@ -8,6 +9,8 @@ export const documentLineSchema = z
     quantity: z.string().max(20),
     price: z.string().max(20),
     vat: z.string().max(10),
+    discount: z.string().max(10).optional(),
+    itemId: z.uuid().optional(),
     priceMode: z.enum(["net", "gross"]),
     category: z.enum(["goods", "service"]),
   })
@@ -43,7 +46,11 @@ export function calculateDocumentLines(input: DocumentLine[]) {
     if (quantity <= 0n)
       throw Error("Cantitatea trebuie să fie mai mare decât zero.");
     if (rate > 10000n) throw Error("Procentul TVA nu poate depăși 100%.");
-    const extended = rounded(quantity * price, 1000n);
+    const discountRate = fixed(line.discount ?? "0", 2, "Reducere");
+    if (discountRate > 10000n) throw Error("Reducerea nu poate depăși 100%.");
+    const beforeDiscount = rounded(quantity * price, 1000n);
+    const discount = rounded(beforeDiscount * discountRate, 10000n);
+    const extended = beforeDiscount - discount;
     const net =
       line.priceMode === "net"
         ? extended
@@ -71,4 +78,33 @@ export function calculateDocumentLines(input: DocumentLine[]) {
   if (totals.total > 100000000)
     throw Error("Totalul depășește limita documentului.");
   return { ...totals, rows };
+}
+
+// Capture editable display values; later catalog changes must not rewrite a draft.
+export function lineFromCatalog(
+  itemId: string,
+  catalog: CatalogEntry[],
+  id: string,
+): DocumentLine {
+  const item = catalog.find(
+    (e) => e.id === itemId && e.kind === "item" && e.active,
+  );
+  if (!item) throw Error("Articolul lipsește sau este arhivat.");
+  const unit = catalog.find(
+    (e) => e.id === item.details.unitId && e.kind === "unit" && e.active,
+  );
+  if (!unit || unit.code.length > 30)
+    throw Error("Verifică unitatea de măsură a articolului în nomenclator.");
+  return documentLineSchema.parse({
+    id,
+    itemId: item.id,
+    description: item.name,
+    unit: unit.code,
+    quantity: "1",
+    price: "0.00",
+    vat: "",
+    discount: "0",
+    priceMode: "net",
+    category: item.details.type === "serviciu" ? "service" : "goods",
+  });
 }

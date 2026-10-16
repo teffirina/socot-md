@@ -1146,3 +1146,10 @@ fieldset:disabled {
 @media print{.socot-organized .menu-toggle,.workspace-back,.module-search,.module-coverage {display:none}}
 
 .documents-workspace.is-editing > .document-flow, .documents-workspace.is-editing > .panel:not(.document-editor) {display:none}
+
+.ai-panel form { display: grid; gap: 12px; margin: 24px 0; }
+.ai-panel textarea { width: 100%; box-sizing: border-box; padding: 12px; font: inherit; resize: vertical; }
+.ai-panel form button { justify-self: start; }
+.ai-proposal { margin-top: 24px; padding: 20px; border: 1px solid #d5ded9; border-radius: 12px; }
+.ai-proposal button { margin: 8px 8px 0 0; }
+.ai-proposal p, .ai-panel td { overflow-wrap: anywhere; }

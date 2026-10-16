@@ -75,3 +75,35 @@ test("documentele cu poziții nu sunt convertite în înregistrări simplificate
     /Confirmarea contabilă pe poziții/,
   );
 });
+
+test("reduceri net/gross, rotunjire și limite fără schimbarea ciornelor vechi", () => {
+  const net = calculateDocumentLines([
+    { ...line, price: "100", priceMode: "net", discount: "10" },
+  ]);
+  assert.equal(net.net, 9000);
+  assert.equal(net.vat, 1800);
+  assert.equal(net.total, 10800);
+  const gross = calculateDocumentLines([
+    { ...line, price: "120", discount: "10" },
+  ]);
+  assert.equal(gross.net, 9000);
+  assert.equal(gross.vat, 1800);
+  assert.equal(gross.total, 10800);
+  assert.equal(calculateDocumentLines([{ ...line, discount: "100" }]).total, 0);
+  assert.equal(
+    calculateDocumentLines([
+      { ...line, price: "0.05", vat: "0", discount: "10" },
+    ]).total,
+    4,
+  );
+  assert.equal(
+    calculateDocumentLines([{ ...line, discount: "12,50" }]).total,
+    218750,
+  );
+  assert.deepEqual(
+    calculateDocumentLines([line]),
+    calculateDocumentLines([{ ...line, discount: "0" }]),
+  );
+  for (const discount of ["-1", "100.01", "", "1.001", "abc"])
+    assert.throws(() => calculateDocumentLines([{ ...line, discount }]));
+});
