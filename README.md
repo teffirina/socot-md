@@ -4,6 +4,10 @@ Aplicație financiară originală, în română, cu aceeași interfață Next.js
 
 **Stadiu:** fundație funcțională și flux simplificat de facturare, nu platformă contabilă completă. Consultați [raportul verificărilor](docs/VERIFICARE.md) pentru artefactele reale și limitările curente. Repository privat: https://github.com/teffirina/socot-md. Domeniile `app.socot.md` și `api.socot.md` sunt doar adrese propuse, nu servicii publicate.
 
+## Varianta web Lovable (`lovable/`)
+
+Directorul `lovable/` conține aplicația web din repository-ul [Socot.md-GLIA](https://github.com/teffirina/Socot.md-GLIA), cu istoricul său păstrat. Este o portare separată (TanStack Start + Supabase + Drizzle), cu propriile `package.json`, teste și migrații; nu partajează cod de rulare cu aplicația Next.js/Tauri de la rădăcină. Rulare: `cd lovable && npm i && npm run dev`. Lista modulelor portate este în [`lovable/roadmap.md`](lovable/roadmap.md).
+
 ## Rulare web și API local
 
 Necesită Node.js 22+, npm, Docker cu Compose; desktop: Rust stable, Xcode Command Line Tools pe macOS / Microsoft C++ Build Tools și WebView2 pe Windows.

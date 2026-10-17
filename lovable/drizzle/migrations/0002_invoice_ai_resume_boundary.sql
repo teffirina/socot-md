@@ -1,0 +1,2 @@
+ALTER TABLE public.invoice_ai_state ADD COLUMN resumable boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.invoice_ai_state.resumable IS 'Only owner-initiated credit or workspace-policy recovery; provider access denials never resume automatically.';
