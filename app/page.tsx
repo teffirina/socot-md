@@ -24,6 +24,9 @@ import { can } from "../lib/permissions";
 import LedgerPanel from "./ledger-panel";
 import ReconciliationPanel from "./reconciliation-panel";
 import TutorialButton from "./tutorial";
+import HomeDashboard from "./home-dashboard";
+import { navIcons } from "./nav-icons";
+import { todayLine } from "../lib/dashboard";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -446,7 +449,9 @@ export default function Page() {
           Socot
         </div>
         <div className="company">
-          <span className="avatar">S</span>
+          <span className="avatar">
+            {(demo ? (state.company?.name ?? "Socot") : "Compania").charAt(0)}
+          </span>
           <div>
             <strong>
               {demo
@@ -523,22 +528,14 @@ export default function Page() {
                     }
                     onClick={() => setView(v)}
                   >
-                    <span aria-hidden="true">
-                      {workspaces[v]?.icon ??
-                        (
-                          {
-                            Acasă: "◫",
-                            "Asistent AI": "✦",
-                            Documente: "▤",
-                            "Spațiu de lucru": "▦",
-                            Contabilitate: "≋",
-                            Rapoarte: "▥",
-                            Întreprindere: "▣",
-                            Setări: "⚙",
-                            Nomenclatoare: "▤",
-                          } as Record<string, string>
-                        )[v]}
-                    </span>
+                    {(() => {
+                      const Icon = navIcons[v];
+                      return Icon ? (
+                        <Icon size={17} strokeWidth={1.8} aria-hidden />
+                      ) : (
+                        <span aria-hidden="true">{workspaces[v]?.icon}</span>
+                      );
+                    })()}
                     {v}
                   </button>
                 ))}
@@ -597,11 +594,13 @@ export default function Page() {
           <div className="heading">
             <div>
               <p className="eyebrow">
-                {demo
-                  ? "SOCOT ATELIER SRL · DEMONSTRAȚIE"
-                  : "SPAȚIUL TĂU FINANCIAR"}
+                {view === "Acasă"
+                  ? `${todayLine(new Date().toISOString().slice(0, 10))}${demo ? " · Demonstrație" : ""}`
+                  : demo
+                    ? "SOCOT ATELIER SRL · DEMONSTRAȚIE"
+                    : "SPAȚIUL TĂU FINANCIAR"}
               </p>
-              <h1>{view === "Acasă" ? "Privire de ansamblu" : title}</h1>
+              <h1>{view === "Acasă" ? "Acasă" : title}</h1>
               <p className="muted">
                 {(
                   {
@@ -767,11 +766,21 @@ export default function Page() {
               ))}
             </div>
           )}
-          {(view === "Acasă" ||
-            view === "Încasări clienți" ||
+          {view === "Acasă" && (
+            <HomeDashboard
+              snapshot={state}
+              today={new Date().toISOString().slice(0, 10)}
+              writable={writable}
+              busy={busy}
+              canJournal={demo || can(session.role, "journal.read")}
+              go={setView}
+              onPay={setPayment}
+            />
+          )}
+          {(view === "Încasări clienți" ||
             (view === "Rapoarte" && reportView === "Creanțe")) && (
             <>
-              <section className="metrics" data-t="home-metrics">
+              <section className="metrics">
                 {[
                   ["Vânzări înregistrate", sum.sales, "↗"],
                   ["Încasări", sum.paid, "↓"],
@@ -787,64 +796,13 @@ export default function Page() {
                   </article>
                 ))}
               </section>
-              {view === "Acasă" && (
-                <section className="work-start" data-t="home-actions">
-                  <div>
-                    <p className="eyebrow">CONTINUĂ LUCRUL</p>
-                    <h2>Ce vrei să faci?</h2>
-                    <p className="muted">
-                      Acces direct la documente și verificări.
-                    </p>
-                  </div>
-                  <div className="quick-actions">
-                    <button
-                      className="secondary"
-                      onClick={() => setView("Vânzări")}
-                    >
-                      <strong>Vânzări și încasări ↗</strong>
-                      <small>
-                        {sales.filter((i) => i.paid < i.total).length} facturi
-                        cu sold deschis
-                      </small>
-                    </button>
-                    <button
-                      className="secondary"
-                      onClick={() => setView("Cumpărări")}
-                    >
-                      <strong>Cumpărări și furnizori ↗</strong>
-                      <small>Documente primite și sume de plată</small>
-                    </button>
-                    <button
-                      className="secondary"
-                      onClick={() => {
-                        setView("Rapoarte");
-                        setReportView("Creanțe");
-                      }}
-                    >
-                      <strong>Vezi rapoartele ↗</strong>
-                      <small>Creanțe și situația conturilor</small>
-                    </button>
-                    {(demo || can(session.role, "journal.read")) && (
-                      <button
-                        className="secondary"
-                        onClick={() => setView("Contabilitate")}
-                      >
-                        <strong>Verifică jurnalul ↗</strong>
-                        <small>Articole, perioade și audit</small>
-                      </button>
-                    )}
-                  </div>
-                </section>
-              )}
-              <section className="panel" data-t="home-docs">
+              <section className="panel">
                 <div className="panelhead">
                   <div>
                     <h2>
                       {view === "Rapoarte"
                         ? "Situația creanțelor"
-                        : view === "Acasă"
-                          ? "Documente recente"
-                          : "Facturi de vânzare"}
+                        : "Facturi de vânzare"}
                     </h2>
                     <p className="muted">
                       {sales.length} documente ·{" "}
@@ -900,8 +858,7 @@ export default function Page() {
                         )
                         .slice()
                         .sort((a, b) => b.date.localeCompare(a.date))
-                        .slice(0, view === "Acasă" ? 5 : undefined)
-                        .map((i) => (
+                                                .map((i) => (
                           <tr key={i.id}>
                             <td>
                               <strong>{i.customer}</strong>
@@ -950,14 +907,6 @@ export default function Page() {
                     </tbody>
                   </table>
                 </div>
-                {view === "Acasă" && sales.length > 5 && (
-                  <button
-                    className="textbutton"
-                    onClick={() => setView("Vânzări")}
-                  >
-                    Vezi toate cele {sales.length} documente →
-                  </button>
-                )}
                 {!sales.length && (
                   <div className="empty">
                     <span>▤</span>

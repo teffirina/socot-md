@@ -37,7 +37,7 @@ const documents = (kind: "sale" | "expense"): TutorialStep[] => [
 export const tutorials: Record<string, Tutorial> = {
   acasa: {
     key: "acasa",
-    title: "Privire de ansamblu",
+    title: "Acasă",
     steps: [
       {
         selector: '[data-t="menu-search"]',
@@ -47,7 +47,7 @@ export const tutorials: Record<string, Tutorial> = {
       {
         selector: '[data-t="home-metrics"]',
         title: "Cifrele pe scurt",
-        body: "Vânzările înregistrate, încasările și suma de încasat, calculate din documentele salvate, în MDL.",
+        body: "Vânzările, cheltuielile și sumele de încasat și de plătit, calculate din documentele salvate, în MDL.",
       },
       {
         selector: '[data-t="new-invoice"]',
@@ -56,13 +56,13 @@ export const tutorials: Record<string, Tutorial> = {
       },
       {
         selector: '[data-t="home-actions"]',
-        title: "Continui lucrul",
-        body: "Acces direct la vânzări, cumpărări, rapoarte și jurnal, după drepturile rolului tău.",
+        title: "Fluxul documentelor",
+        body: "Câte documente sunt în ciornă, la verificare și înregistrate. Apasă pe o etapă ca să mergi direct acolo.",
       },
       {
         selector: '[data-t="home-docs"]',
         title: "Documente recente",
-        body: "Ultimele facturi de vânzare cu totalul, suma de încasat și starea. „Încasează” înregistrează o plată parțială sau integrală.",
+        body: "Ultimele documente cu suma și starea. „Încasează” înregistrează o plată parțială sau integrală.",
       },
     ],
   },
