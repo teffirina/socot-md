@@ -196,7 +196,11 @@ export default function DocumentsPanel({
   }
   return (
     <div className={`documents-workspace ${editing ? "is-editing" : ""}`}>
-      <div className="document-flow" aria-label="Etapele documentului">
+      <div
+        className="document-flow"
+        aria-label="Etapele documentului"
+        data-t="doc-flow"
+      >
         <div>
           <b>01 · Pregătire</b>
           <small>Ciorne editabile, fără efect asupra soldurilor</small>
@@ -251,7 +255,7 @@ export default function DocumentsPanel({
             </p>
           </div>
           {writable && (
-            <div className="controls">
+            <div className="controls" data-t="doc-new">
               {scopeKind !== "expense" && (
                 <button
                   disabled={busy || !!editing}
@@ -273,6 +277,7 @@ export default function DocumentsPanel({
                 <>
                   <button
                     className="secondary"
+                    data-t="doc-scan"
                     disabled={busy || !!editing}
                     onClick={() => scanInput.current?.click()}
                   >
@@ -294,7 +299,7 @@ export default function DocumentsPanel({
             </div>
           )}
         </div>
-        <div className="document-filters">
+        <div className="document-filters" data-t="doc-filters">
           <label>
             Caută
             <input
@@ -349,7 +354,7 @@ export default function DocumentsPanel({
           pentru pregătire. Registrul online include ultimele 200 de documente
           descărcate.
         </p>
-        <div className="tablewrap">
+        <div className="tablewrap" data-t="doc-table">
           <table>
             <thead>
               <tr>

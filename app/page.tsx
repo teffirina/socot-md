@@ -23,6 +23,7 @@ import CompanyPanel from "./company-panel";
 import { can } from "../lib/permissions";
 import LedgerPanel from "./ledger-panel";
 import ReconciliationPanel from "./reconciliation-panel";
+import TutorialButton from "./tutorial";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -455,7 +456,7 @@ export default function Page() {
             <small>{demo ? "Companie demonstrativă" : session.role}</small>
           </div>
         </div>
-        <label className="nav-search">
+        <label className="nav-search" data-t="menu-search">
           Caută în meniu
           <input
             type="search"
@@ -569,6 +570,7 @@ export default function Page() {
               Socot <span className="slash">/</span> {title}
             </span>
           </div>
+          <TutorialButton view={view} userId={session.id} />
           <div className="connection" role="status">
             <i className={status.startsWith("Offline") ? "offline" : ""} />
             {demo
@@ -630,7 +632,9 @@ export default function Page() {
               </p>
             </div>
             {writable && ["Acasă", "Încasări clienți"].includes(view) && (
-              <button onClick={() => setForm(true)}>＋ Factură nouă</button>
+              <button data-t="new-invoice" onClick={() => setForm(true)}>
+                ＋ Factură nouă
+              </button>
             )}
           </div>
           {error && (
@@ -732,7 +736,12 @@ export default function Page() {
             />
           )}
           {view === "Rapoarte" && (
-            <div className="report-switch" role="group" aria-label="Tip raport">
+            <div
+              className="report-switch"
+              role="group"
+              aria-label="Tip raport"
+              data-t="report-switch"
+            >
               {[
                 "Creanțe",
                 "Act de verificare",
@@ -762,7 +771,7 @@ export default function Page() {
             view === "Încasări clienți" ||
             (view === "Rapoarte" && reportView === "Creanțe")) && (
             <>
-              <section className="metrics">
+              <section className="metrics" data-t="home-metrics">
                 {[
                   ["Vânzări înregistrate", sum.sales, "↗"],
                   ["Încasări", sum.paid, "↓"],
@@ -779,7 +788,7 @@ export default function Page() {
                 ))}
               </section>
               {view === "Acasă" && (
-                <section className="work-start">
+                <section className="work-start" data-t="home-actions">
                   <div>
                     <p className="eyebrow">CONTINUĂ LUCRUL</p>
                     <h2>Ce vrei să faci?</h2>
@@ -827,7 +836,7 @@ export default function Page() {
                   </div>
                 </section>
               )}
-              <section className="panel">
+              <section className="panel" data-t="home-docs">
                 <div className="panelhead">
                   <div>
                     <h2>

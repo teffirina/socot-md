@@ -107,7 +107,7 @@ export default function ReconciliationPanel({
         facturile de vânzare și încasările înregistrate; partea clientului
         rămâne goală, pentru datele lui.
       </p>
-      <form onSubmit={generate}>
+      <form onSubmit={generate} data-t="act-form">
         <div className="formgrid">
           <label>
             Clientul
