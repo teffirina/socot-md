@@ -22,6 +22,7 @@ import ExpensesPanel from "./expenses-panel";
 import CompanyPanel from "./company-panel";
 import { can } from "../lib/permissions";
 import LedgerPanel from "./ledger-panel";
+import ReconciliationPanel from "./reconciliation-panel";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -734,6 +735,7 @@ export default function Page() {
             <div className="report-switch" role="group" aria-label="Tip raport">
               {[
                 "Creanțe",
+                "Act de verificare",
                 ...(demo || can(session.role, "journal.read")
                   ? ["Balanță și conturi"]
                   : []),
@@ -748,7 +750,9 @@ export default function Page() {
                   <small>
                     {t === "Creanțe"
                       ? "Facturi și sume de încasat"
-                      : "Solduri, rulaje și documente sursă"}
+                      : t === "Act de verificare"
+                        ? "Decontări reciproce cu un client"
+                        : "Solduri, rulaje și documente sursă"}
                   </small>
                 </button>
               ))}
@@ -957,6 +961,9 @@ export default function Page() {
                 )}
               </section>
             </>
+          )}
+          {view === "Rapoarte" && reportView === "Act de verificare" && (
+            <ReconciliationPanel demo={demo} snapshot={state} />
           )}
           {view === "Rapoarte" &&
             reportView === "Balanță și conturi" &&

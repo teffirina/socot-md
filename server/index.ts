@@ -5,6 +5,7 @@ import { catalogRouter } from "./catalog";
 import { companyRouter } from "./company";
 import { can } from "../lib/permissions";
 import { complianceRouter } from "./compliance";
+import { reconciliationRouter } from "./reconciliation";
 import { ruleSchema, selectRule, assertPeriodOpen } from "../lib/compliance";
 import express from "express";
 import cors from "cors";
@@ -151,6 +152,7 @@ app.use("/api", catalogRouter(db));
 app.use("/api", legislationRouter(db));
 app.use("/api", companyRouter(db));
 app.use("/api", complianceRouter(db));
+app.use("/api", reconciliationRouter(db));
 app.post("/api/operations", async (req, res) => {
   const user = res.locals.user;
   if (!can(user.role, "invoice.write")) {

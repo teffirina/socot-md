@@ -1153,3 +1153,14 @@ fieldset:disabled {
 .ai-proposal { margin-top: 24px; padding: 20px; border: 1px solid #d5ded9; border-radius: 12px; }
 .ai-proposal button { margin: 8px 8px 0 0; }
 .ai-proposal p, .ai-panel td { overflow-wrap: anywhere; }
+
+.reconciliation .act-sheet { margin-top: 20px; }
+.reconciliation .act-title { text-align: center; line-height: 1.5; }
+.reconciliation .act-sheet td { border: 1px solid var(--line); }
+.reconciliation .act-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; line-height: 1.6; }
+@media(max-width:600px) { .reconciliation .act-parties { grid-template-columns: 1fr; } }
+@media print {
+  .reconciliation > :not(.act-sheet) { display: none !important; }
+  .reconciliation .act-sheet td:last-child { display: table-cell !important; }
+  .reconciliation .tablewrap { overflow: visible; }
+}
