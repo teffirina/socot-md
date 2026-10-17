@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -25,5 +29,10 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".tools", "src-tauri/target"]
+  "exclude": [
+    "node_modules",
+    ".tools",
+    "src-tauri/target",
+    "lovable"
+  ]
 }

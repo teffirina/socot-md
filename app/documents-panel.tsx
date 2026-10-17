@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import DocumentLinesEditor from "./document-lines-editor";
 import DocumentMovements from "./document-movements";
 import {
@@ -11,6 +11,12 @@ import {
 import { validateDocumentReferences } from "../lib/catalog";
 import type { Snapshot } from "../lib/storage";
 import type { SyncEngine } from "../lib/sync";
+import { api } from "../lib/api";
+import {
+  draftFromScan,
+  scanFileTypes,
+  scanMaxBytes,
+} from "../lib/invoice-scan";
 const money = (v: number) =>
   (v / 100).toLocaleString("ro-MD", { style: "currency", currency: "MDL" });
 export default function DocumentsPanel({
@@ -21,6 +27,9 @@ export default function DocumentsPanel({
   navigate,
   scopeKind,
   onEditingChange,
+  aiScan = false,
+  start,
+  onStarted,
 }: {
   snapshot: Snapshot;
   engine: SyncEngine;
@@ -29,6 +38,9 @@ export default function DocumentsPanel({
   navigate: (view: string) => void;
   scopeKind?: "sale" | "expense";
   onEditingChange?: (editing: boolean) => void;
+  aiScan?: boolean;
+  start?: { kind: "sale" | "expense"; file?: File };
+  onStarted?: () => void;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState<DocumentDraft | null>(null);
@@ -40,6 +52,16 @@ export default function DocumentsPanel({
   const [to, setTo] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [scanNotes, setScanNotes] = useState<string[]>([]);
+  const scanInput = useRef<HTMLInputElement>(null);
+  // Opened from the "+ Nou" menu: start the blank document or the scan once.
+  useEffect(() => {
+    if (!start) return;
+    onStarted?.();
+    if (start.file) void scan(start.file, start.kind);
+    else create(start.kind);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start]);
   useEffect(() => {
     onEditingChange?.(!!editing);
     const guard = (event: BeforeUnloadEvent) => {
@@ -98,6 +120,7 @@ export default function DocumentsPanel({
   }
   function create(kind: "sale" | "expense") {
     setError("");
+    setScanNotes([]);
     setReview(null);
     setEditing({
       id: crypto.randomUUID(),
@@ -109,6 +132,44 @@ export default function DocumentsPanel({
       date: new Date().toISOString().slice(0, 10),
       total: 0,
       revision: 0,
+    });
+  }
+  async function scan(file: File, scanKind: "sale" | "expense") {
+    if (!scanFileTypes.includes(file.type as (typeof scanFileTypes)[number])) {
+      setError("Alege o factură PDF, PNG, JPEG sau WEBP.");
+      return;
+    }
+    if (file.size > scanMaxBytes) {
+      setError("Fișierul depășește 7 MB.");
+      return;
+    }
+    setScanNotes([]);
+    await run(async () => {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 32768)
+        binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+      const result = await api(
+        "/ai/invoice-scan",
+        {
+          kind: scanKind,
+          file: { name: file.name, type: file.type, data: btoa(binary) },
+        },
+        100_000,
+      );
+      const { draft, number, warnings } = draftFromScan(
+        result.invoice,
+        scanKind,
+        snapshot.catalog ?? [],
+        crypto.randomUUID(),
+        new Date().toISOString().slice(0, 10),
+      );
+      setReview(null);
+      setEditing(draft);
+      setScanNotes([
+        `Factura${number ? ` nr. ${number}` : ""} a fost citită de AI. Verifică partenerul, data și totalul înainte de a salva ciorna.`,
+        ...warnings,
+      ]);
     });
   }
   async function save(event: React.FormEvent<HTMLFormElement>) {
@@ -147,7 +208,11 @@ export default function DocumentsPanel({
   }
   return (
     <div className={`documents-workspace ${editing ? "is-editing" : ""}`}>
-      <div className="document-flow" aria-label="Etapele documentului">
+      <div
+        className="document-flow"
+        aria-label="Etapele documentului"
+        data-t="doc-flow"
+      >
         <div>
           <b>01 · Pregătire</b>
           <small>Ciorne editabile, fără efect asupra soldurilor</small>
@@ -168,6 +233,16 @@ export default function DocumentsPanel({
       {error && (
         <div className="error" role="alert">
           {error}
+        </div>
+      )}
+      {editing && scanNotes.length > 0 && (
+        <div className="notice" role="status">
+          <strong>Scanare AI</strong>
+          <ul>
+            {scanNotes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
         </div>
       )}
       <section className="panel">
@@ -192,7 +267,7 @@ export default function DocumentsPanel({
             </p>
           </div>
           {writable && (
-            <div className="controls">
+            <div className="controls" data-t="doc-new">
               {scopeKind !== "expense" && (
                 <button
                   disabled={busy || !!editing}
@@ -210,10 +285,33 @@ export default function DocumentsPanel({
                   ＋ Cumpărare / serviciu
                 </button>
               )}
+              {aiScan && scopeKind && (
+                <>
+                  <button
+                    className="secondary"
+                    data-t="doc-scan"
+                    disabled={busy || !!editing}
+                    onClick={() => scanInput.current?.click()}
+                  >
+                    {busy ? "Se citește factura…" : "Scanează factura (AI)"}
+                  </button>
+                  <input
+                    ref={scanInput}
+                    type="file"
+                    hidden
+                    accept={scanFileTypes.join(",")}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) void scan(file, scopeKind);
+                    }}
+                  />
+                </>
+              )}
             </div>
           )}
         </div>
-        <div className="document-filters">
+        <div className="document-filters" data-t="doc-filters">
           <label>
             Caută
             <input
@@ -268,7 +366,7 @@ export default function DocumentsPanel({
           pentru pregătire. Registrul online include ultimele 200 de documente
           descărcate.
         </p>
-        <div className="tablewrap">
+        <div className="tablewrap" data-t="doc-table">
           <table>
             <thead>
               <tr>

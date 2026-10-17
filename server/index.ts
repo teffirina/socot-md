@@ -5,6 +5,7 @@ import { catalogRouter } from "./catalog";
 import { companyRouter } from "./company";
 import { can } from "../lib/permissions";
 import { complianceRouter } from "./compliance";
+import { reconciliationRouter } from "./reconciliation";
 import { ruleSchema, selectRule, assertPeriodOpen } from "../lib/compliance";
 import express from "express";
 import cors from "cors";
@@ -39,7 +40,11 @@ app.use(
   }),
 );
 app.use(cors({ origin, credentials: true }));
-app.use(express.json({ limit: "32kb" }));
+// Invoice scans carry a base64 file and are parsed after authentication.
+const smallJson = express.json({ limit: "32kb" });
+app.use((req, res, next) =>
+  req.path === "/api/ai/invoice-scan" ? next() : smallJson(req, res, next),
+);
 app.use(cookieParser());
 app.use("/api", rateLimit({ windowMs: 60_000, limit: 120 }));
 app.use("/api", (req, res, next) => {
@@ -151,6 +156,7 @@ app.use("/api", catalogRouter(db));
 app.use("/api", legislationRouter(db));
 app.use("/api", companyRouter(db));
 app.use("/api", complianceRouter(db));
+app.use("/api", reconciliationRouter(db));
 app.post("/api/operations", async (req, res) => {
   const user = res.locals.user;
   if (!can(user.role, "invoice.write")) {

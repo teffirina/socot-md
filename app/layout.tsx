@@ -1,3 +1,7 @@
+import "@fontsource-variable/onest";
+import "@fontsource-variable/geologica";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 export const metadata = {
   title: "Socot — afacerea ta, în echilibru",

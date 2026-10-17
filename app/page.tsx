@@ -1,12 +1,11 @@
 "use client";
-import AiPanel from "./ai-panel";
+import AssistantDrawer from "./assistant-drawer";
 import SocotSheetsPanel from "./socot-sheets-panel";
 import DocumentsPanel from "./documents-panel";
 import ModuleWorkspace from "./module-workspace";
 import {
   workspaces,
   workspaceParent,
-  normalizeSearch,
 } from "../lib/workspaces";
 import {
   catalogNames,
@@ -14,20 +13,24 @@ import {
   canReadCatalog,
   type CatalogKind,
 } from "../lib/catalog";
-import { documentAmount } from "../lib/document-workflow";
-import PartnerFields from "./partner-fields";
 import CatalogPanel from "./catalog-panel";
 import packageInfo from "../package.json";
 import ExpensesPanel from "./expenses-panel";
 import CompanyPanel from "./company-panel";
 import { can } from "../lib/permissions";
 import LedgerPanel from "./ledger-panel";
+import ReconciliationPanel from "./reconciliation-panel";
+import TutorialButton from "./tutorial";
+import HomeDashboard from "./home-dashboard";
+import SideNav from "./side-nav";
+import NewMenu from "./new-menu";
+import { todayLine } from "../lib/dashboard";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { desktop, readValue, writeValue, type Snapshot } from "../lib/storage";
 import { SyncEngine } from "../lib/sync";
-import { totals, invoiceSchema, type Invoice } from "../lib/domain";
+import { totals, type Invoice } from "../lib/domain";
 const money = (v: number) =>
   new Intl.NumberFormat("ro-MD", { style: "currency", currency: "MDL" }).format(
     v / 100,
@@ -48,7 +51,10 @@ export default function Page() {
     [documentDirty, setDocumentDirty] = useState(false),
     [pendingNavigation, setPendingNavigation] = useState<string | null>(null),
     [reportView, setReportView] = useState("Creanțe"),
-    [form, setForm] = useState(false),
+    [newDocument, setNewDocument] = useState<{
+      kind: "sale" | "expense";
+      file?: File;
+    }>(),
     [busy, setBusy] = useState(false),
     [query, setQuery] = useState(""),
     [update, setUpdate] = useState<any>(null),
@@ -90,7 +96,9 @@ export default function Page() {
       ? catalogNames[catalogKind]
       : view === "Cheltuieli"
         ? "Datorii și plăți furnizori"
-        : view;
+        : view === "Acasă"
+          ? "Privire de ansamblu"
+          : view;
 
   const sales = state.invoices.filter((i) => i.kind !== "expense");
   const sum = totals(sales);
@@ -207,35 +215,6 @@ export default function Page() {
         password: f.get("password"),
       });
       await start(result.user);
-    });
-  }
-  async function create(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    await action(async () => {
-      const invoice = invoiceSchema.parse({
-        id: crypto.randomUUID(),
-        customer: f.get("customer"),
-        partnerId: f.get("partnerId") || null,
-        contractId: f.get("contractId") || null,
-        total: documentAmount(String(f.get("total"))),
-        paid: 0,
-        version: 0,
-        date: new Date().toISOString().slice(0, 10),
-      });
-      await engine.current!.saveDraft({
-        id: invoice.id,
-        customer: invoice.customer,
-        date: invoice.date,
-        total: invoice.total,
-        kind: "sale",
-        category: "",
-        partnerId: invoice.partnerId ?? null,
-        contractId: invoice.contractId ?? null,
-        revision: 0,
-      });
-      setForm(false);
-      setView("Documente");
     });
   }
   async function pay(e: React.FormEvent<HTMLFormElement>) {
@@ -444,7 +423,9 @@ export default function Page() {
           Socot
         </div>
         <div className="company">
-          <span className="avatar">S</span>
+          <span className="avatar">
+            {(demo ? (state.company?.name ?? "Socot") : "Compania").charAt(0)}
+          </span>
           <div>
             <strong>
               {demo
@@ -454,7 +435,7 @@ export default function Page() {
             <small>{demo ? "Companie demonstrativă" : session.role}</small>
           </div>
         </div>
-        <label className="nav-search">
+        <label className="nav-search" data-t="menu-search">
           Caută în meniu
           <input
             type="search"
@@ -463,86 +444,12 @@ export default function Page() {
             onChange={(e) => setNavQuery(e.target.value)}
           />
         </label>
-        <nav aria-label="Navigare principală">
-          {[
-            {
-              label: "SPAȚIUL MEU",
-              items: [
-                "Acasă",
-                "Documente",
-                "Spațiu de lucru",
-                ...(demo || can(session.role, "invoice.read")
-                  ? ["Asistent AI"]
-                  : []),
-              ],
-            },
-            {
-              label: "ACTIVITATE",
-              items: [
-                "Vânzări",
-                "Cumpărări",
-                "Bancă și casă",
-                "Depozit",
-                "Producție",
-                "Active",
-                "Personal și salarii",
-              ],
-            },
-            {
-              label: "EVIDENȚĂ ȘI RAPOARTE",
-              items: [
-                ...(demo || can(session.role, "journal.read")
-                  ? ["Contabilitate"]
-                  : []),
-                "Rapoarte",
-              ],
-            },
-            {
-              label: "ORGANIZARE",
-              items: ["Nomenclatoare", "Întreprindere", "Setări"],
-            },
-          ]
-            .map((group) => ({
-              ...group,
-              items: group.items.filter((v) =>
-                normalizeSearch(v).includes(normalizeSearch(navQuery)),
-              ),
-            }))
-            .filter((group) => group.items.length)
-            .map((group) => (
-              <div key={group.label}>
-                <p className="navlabel">{group.label}</p>
-                {group.items.map((v) => (
-                  <button
-                    key={v}
-                    className={workspaceParent(view) === v ? "active" : ""}
-                    aria-current={
-                      workspaceParent(view) === v ? "page" : undefined
-                    }
-                    onClick={() => setView(v)}
-                  >
-                    <span aria-hidden="true">
-                      {workspaces[v]?.icon ??
-                        (
-                          {
-                            Acasă: "◫",
-                            "Asistent AI": "✦",
-                            Documente: "▤",
-                            "Spațiu de lucru": "▦",
-                            Contabilitate: "≋",
-                            Rapoarte: "▥",
-                            Întreprindere: "▣",
-                            Setări: "⚙",
-                            Nomenclatoare: "▤",
-                          } as Record<string, string>
-                        )[v]}
-                    </span>
-                    {v}
-                  </button>
-                ))}
-              </div>
-            ))}
-        </nav>
+        <SideNav
+          active={workspaceParent(view)}
+          query={navQuery}
+          journal={demo || can(session.role, "journal.read")}
+          go={setView}
+        />
         <div className="asidebottom">
           <span className="pill">
             {native ? "DESKTOP" : "WEB"} · {packageInfo.version}
@@ -567,6 +474,18 @@ export default function Page() {
             <span>
               Socot <span className="slash">/</span> {title}
             </span>
+          </div>
+          <div className="header-actions">
+            <TutorialButton view={view} userId={session.id} />
+            {(demo || can(session.role, "invoice.read")) && (
+              <AssistantDrawer
+                key={`${demo}-${session.companyId}-${session.role}`}
+                demo={demo}
+                role={session.role}
+                company={demo ? (state.company?.name ?? "demonstrative") : "tale"}
+                navigate={setView}
+              />
+            )}
           </div>
           <div className="connection" role="status">
             <i className={status.startsWith("Offline") ? "offline" : ""} />
@@ -594,11 +513,13 @@ export default function Page() {
           <div className="heading">
             <div>
               <p className="eyebrow">
-                {demo
-                  ? "SOCOT ATELIER SRL · DEMONSTRAȚIE"
-                  : "SPAȚIUL TĂU FINANCIAR"}
+                {view === "Acasă"
+                  ? `${todayLine(new Date().toISOString().slice(0, 10))}${demo ? " · Demonstrație" : ""}`
+                  : demo
+                    ? "SOCOT ATELIER SRL · DEMONSTRAȚIE"
+                    : "SPAȚIUL TĂU FINANCIAR"}
               </p>
-              <h1>{view === "Acasă" ? "Privire de ansamblu" : title}</h1>
+              <h1>{view === "Acasă" ? "Acasă" : title}</h1>
               <p className="muted">
                 {(
                   {
@@ -617,7 +538,6 @@ export default function Page() {
                     Întreprindere:
                       "Datele firmei, contactele și politica contabilă.",
                     Setări: "Conexiune, stocare locală și actualizări.",
-                    "Asistent AI": "Caută documente și verifică propunerile contabile.",
                     Nomenclatoare:
                       "Date de referință comune pentru documentele firmei.",
                   } as Record<string, string>
@@ -628,8 +548,18 @@ export default function Page() {
                     : "Date comune pentru documentele firmei.")}
               </p>
             </div>
-            {writable && ["Acasă", "Încasări clienți"].includes(view) && (
-              <button onClick={() => setForm(true)}>＋ Factură nouă</button>
+            {writable && (
+              <NewMenu
+                canScan={!demo}
+                onNew={(kind) => {
+                  setNewDocument({ kind });
+                  setView(`documents:${kind}`);
+                }}
+                onScan={(kind, file) => {
+                  setNewDocument({ kind, file });
+                  setView(`documents:${kind}`);
+                }}
+              />
             )}
           </div>
           {error && (
@@ -731,9 +661,15 @@ export default function Page() {
             />
           )}
           {view === "Rapoarte" && (
-            <div className="report-switch" role="group" aria-label="Tip raport">
+            <div
+              className="report-switch"
+              role="group"
+              aria-label="Tip raport"
+              data-t="report-switch"
+            >
               {[
                 "Creanțe",
+                "Act de verificare",
                 ...(demo || can(session.role, "journal.read")
                   ? ["Balanță și conturi"]
                   : []),
@@ -748,14 +684,26 @@ export default function Page() {
                   <small>
                     {t === "Creanțe"
                       ? "Facturi și sume de încasat"
-                      : "Solduri, rulaje și documente sursă"}
+                      : t === "Act de verificare"
+                        ? "Decontări reciproce cu un client"
+                        : "Solduri, rulaje și documente sursă"}
                   </small>
                 </button>
               ))}
             </div>
           )}
-          {(view === "Acasă" ||
-            view === "Încasări clienți" ||
+          {view === "Acasă" && (
+            <HomeDashboard
+              snapshot={state}
+              today={new Date().toISOString().slice(0, 10)}
+              writable={writable}
+              busy={busy}
+              canJournal={demo || can(session.role, "journal.read")}
+              go={setView}
+              onPay={setPayment}
+            />
+          )}
+          {(view === "Încasări clienți" ||
             (view === "Rapoarte" && reportView === "Creanțe")) && (
             <>
               <section className="metrics">
@@ -774,64 +722,13 @@ export default function Page() {
                   </article>
                 ))}
               </section>
-              {view === "Acasă" && (
-                <section className="work-start">
-                  <div>
-                    <p className="eyebrow">CONTINUĂ LUCRUL</p>
-                    <h2>Ce vrei să faci?</h2>
-                    <p className="muted">
-                      Acces direct la documente și verificări.
-                    </p>
-                  </div>
-                  <div className="quick-actions">
-                    <button
-                      className="secondary"
-                      onClick={() => setView("Vânzări")}
-                    >
-                      <strong>Vânzări și încasări ↗</strong>
-                      <small>
-                        {sales.filter((i) => i.paid < i.total).length} facturi
-                        cu sold deschis
-                      </small>
-                    </button>
-                    <button
-                      className="secondary"
-                      onClick={() => setView("Cumpărări")}
-                    >
-                      <strong>Cumpărări și furnizori ↗</strong>
-                      <small>Documente primite și sume de plată</small>
-                    </button>
-                    <button
-                      className="secondary"
-                      onClick={() => {
-                        setView("Rapoarte");
-                        setReportView("Creanțe");
-                      }}
-                    >
-                      <strong>Vezi rapoartele ↗</strong>
-                      <small>Creanțe și situația conturilor</small>
-                    </button>
-                    {(demo || can(session.role, "journal.read")) && (
-                      <button
-                        className="secondary"
-                        onClick={() => setView("Contabilitate")}
-                      >
-                        <strong>Verifică jurnalul ↗</strong>
-                        <small>Articole, perioade și audit</small>
-                      </button>
-                    )}
-                  </div>
-                </section>
-              )}
               <section className="panel">
                 <div className="panelhead">
                   <div>
                     <h2>
                       {view === "Rapoarte"
                         ? "Situația creanțelor"
-                        : view === "Acasă"
-                          ? "Documente recente"
-                          : "Facturi de vânzare"}
+                        : "Facturi de vânzare"}
                     </h2>
                     <p className="muted">
                       {sales.length} documente ·{" "}
@@ -887,8 +784,7 @@ export default function Page() {
                         )
                         .slice()
                         .sort((a, b) => b.date.localeCompare(a.date))
-                        .slice(0, view === "Acasă" ? 5 : undefined)
-                        .map((i) => (
+                                                .map((i) => (
                           <tr key={i.id}>
                             <td>
                               <strong>{i.customer}</strong>
@@ -937,14 +833,6 @@ export default function Page() {
                     </tbody>
                   </table>
                 </div>
-                {view === "Acasă" && sales.length > 5 && (
-                  <button
-                    className="textbutton"
-                    onClick={() => setView("Vânzări")}
-                  >
-                    Vezi toate cele {sales.length} documente →
-                  </button>
-                )}
                 {!sales.length && (
                   <div className="empty">
                     <span>▤</span>
@@ -958,6 +846,9 @@ export default function Page() {
               </section>
             </>
           )}
+          {view === "Rapoarte" && reportView === "Act de verificare" && (
+            <ReconciliationPanel demo={demo} snapshot={state} />
+          )}
           {view === "Rapoarte" &&
             reportView === "Balanță și conturi" &&
             (demo || can(session.role, "journal.read")) && (
@@ -966,6 +857,9 @@ export default function Page() {
           {(view === "Documente" || !!scopedKind) && (
             <DocumentsPanel
               key={view}
+              aiScan={!demo && writable}
+              start={newDocument?.kind === scopedKind ? newDocument : undefined}
+              onStarted={() => setNewDocument(undefined)}
               scopeKind={scopedKind}
               onEditingChange={setDocumentDirty}
               snapshot={state}
@@ -974,9 +868,6 @@ export default function Page() {
               journalAccess={demo || can(session.role, "journal.read")}
               navigate={setView}
             />
-          )}
-          {view === "Asistent AI" && (
-            <AiPanel key={`${demo}-${session.companyId}-${session.role}`} demo={demo} role={session.role} navigate={setView} />
           )}
           {view === "Spațiu de lucru" && (
             <SocotSheetsPanel
@@ -1161,49 +1052,6 @@ export default function Page() {
                   Renunță
                 </button>
                 <button disabled={busy}>Confirmă încasarea</button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
-      {form && (
-        <div className="modalback">
-          <section
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="invoice-title"
-          >
-            <p className="eyebrow">DOCUMENT SOCOT</p>
-            <h2 id="invoice-title">Factură nouă</h2>
-            <p className="muted">Flux simplificat pentru servicii, fără TVA.</p>
-            <form onSubmit={create}>
-              <PartnerFields entries={state.catalog ?? []} />
-              <label>
-                Total (MDL)
-                <input
-                  name="total"
-                  required
-                  type="number"
-                  min="0.01"
-                  max="1000000"
-                  step="0.01"
-                  placeholder="0,00"
-                />
-              </label>
-              <p className="footnote">
-                Salvează ciorna, apoi verifică și confirmă documentul în
-                registrul Documente. Ciorna nu afectează soldurile.
-              </p>
-              <div className="controls">
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => setForm(false)}
-                >
-                  Renunță
-                </button>
-                <button disabled={busy}>Salvează ciorna</button>
               </div>
             </form>
           </section>

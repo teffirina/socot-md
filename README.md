@@ -4,6 +4,16 @@ Aplicație financiară originală, în română, cu aceeași interfață Next.js
 
 **Stadiu:** fundație funcțională și flux simplificat de facturare, nu platformă contabilă completă. Consultați [raportul verificărilor](docs/VERIFICARE.md) pentru artefactele reale și limitările curente. Repository privat: https://github.com/teffirina/socot-md. Domeniile `app.socot.md` și `api.socot.md` sunt doar adrese propuse, nu servicii publicate.
 
+## Varianta web Lovable (`lovable/`)
+
+Directorul `lovable/` conține aplicația web din repository-ul [Socot.md-GLIA](https://github.com/teffirina/Socot.md-GLIA), cu istoricul său păstrat. Este o portare separată (TanStack Start + Supabase + Drizzle), cu propriile `package.json`, teste și migrații; nu partajează cod de rulare cu aplicația Next.js/Tauri de la rădăcină. Rulare: `cd lovable && npm i && npm run dev`. Lista modulelor portate este în [`lovable/roadmap.md`](lovable/roadmap.md).
+
+Funcții aduse din varianta Lovable în aplicația principală:
+
+- **Act de verificare** (Rapoarte → Act de verificare): client + perioadă, facturile de vânzare la Credit, încasările din jurnal la Debit, sold inițial și final, format tipăribil. API: `POST /api/reconciliation`.
+- **Scanare AI a facturilor** (Vânzări / Cumpărări → Documente → „Scanează factura (AI)”): PDF sau imagine de cel mult 7 MB, citită prin OpenAI (`OPENAI_API_KEY`, `SOCOT_AI_MODEL`). Rezultatul deschide o ciornă precompletată cu partenerul (după IDNO din nomenclator), data și totalul MDL; nimic nu se salvează automat. Indisponibilă în modul demonstrativ. API: `POST /api/ai/invoice-scan`.
+- **Tutoriale** (butonul „? Tutorial” din antet): pași pe elementele reale pentru Acasă, Documente de vânzare și cumpărare și Rapoarte; progresul se păstrează local, per utilizator.
+
 ## Rulare web și API local
 
 Necesită Node.js 22+, npm, Docker cu Compose; desktop: Rust stable, Xcode Command Line Tools pe macOS / Microsoft C++ Build Tools și WebView2 pe Windows.
