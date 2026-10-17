@@ -7,11 +7,9 @@ type Kind = "sale" | "expense";
 
 // "+ Nou" menu: a blank sale or purchase, or an invoice read by AI into a draft.
 export default function NewMenu({
-  canScan,
   onNew,
   onScan,
 }: {
-  canScan: boolean;
   onNew: (kind: Kind) => void;
   onScan: (kind: Kind, file: File) => void;
 }) {
@@ -72,21 +70,14 @@ export default function NewMenu({
           </button>
           <hr />
           {(["expense", "sale"] as const).map((kind) => (
-            <button
-              key={kind}
-              role="menuitem"
-              disabled={!canScan}
-              onClick={() => scan(kind)}
-            >
+            <button key={kind} role="menuitem" onClick={() => scan(kind)}>
               <ScanLine size={16} aria-hidden />
               <span>
                 Scanează factură cu AI
                 <small>
-                  {canScan
-                    ? kind === "expense"
-                      ? "De la furnizor · PDF sau poză"
-                      : "Către client · PDF sau poză"
-                    : "Disponibil în contul conectat"}
+                  {kind === "expense"
+                    ? "De la furnizor · PDF sau poză"
+                    : "Către client · PDF sau poză"}
                 </small>
               </span>
             </button>

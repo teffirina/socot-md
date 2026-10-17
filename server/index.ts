@@ -1,4 +1,5 @@
 import { aiRouter } from "./ai";
+import { demoAiRouter } from "./demo-ai";
 import { legislationRouter } from "./legislation";
 import { validateDocumentReferences, catalogSchema } from "../lib/catalog";
 import { catalogRouter } from "./catalog";
@@ -43,7 +44,9 @@ app.use(cors({ origin, credentials: true }));
 // Invoice scans carry a base64 file and are parsed after authentication.
 const smallJson = express.json({ limit: "32kb" });
 app.use((req, res, next) =>
-  req.path === "/api/ai/invoice-scan" ? next() : smallJson(req, res, next),
+  req.path === "/api/ai/invoice-scan" || req.path === "/api/demo-ai/invoice-scan"
+    ? next()
+    : smallJson(req, res, next),
 );
 app.use(cookieParser());
 app.use("/api", rateLimit({ windowMs: 60_000, limit: 120 }));
@@ -62,6 +65,7 @@ app.get("/api/health", async (_req, res) => {
   await db.$queryRaw`SELECT 1`;
   res.json({ ok: true });
 });
+app.use("/api/demo-ai", demoAiRouter());
 app.post(
   "/api/login",
   rateLimit({ windowMs: 15 * 60_000, limit: 10 }),

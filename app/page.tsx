@@ -481,6 +481,7 @@ export default function Page() {
               <AssistantDrawer
                 key={`${demo}-${session.companyId}-${session.role}`}
                 demo={demo}
+                invoices={state.invoices}
                 role={session.role}
                 company={demo ? (state.company?.name ?? "demonstrative") : "tale"}
                 navigate={setView}
@@ -550,7 +551,6 @@ export default function Page() {
             </div>
             {writable && (
               <NewMenu
-                canScan={!demo}
                 onNew={(kind) => {
                   setNewDocument({ kind });
                   setView(`documents:${kind}`);
@@ -857,7 +857,8 @@ export default function Page() {
           {(view === "Documente" || !!scopedKind) && (
             <DocumentsPanel
               key={view}
-              aiScan={!demo && writable}
+              aiScan={writable}
+              demo={demo}
               start={newDocument?.kind === scopedKind ? newDocument : undefined}
               onStarted={() => setNewDocument(undefined)}
               scopeKind={scopedKind}
