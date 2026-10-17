@@ -28,6 +28,7 @@ export default function DocumentsPanel({
   scopeKind,
   onEditingChange,
   aiScan = false,
+  demo = false,
   start,
   onStarted,
 }: {
@@ -39,6 +40,7 @@ export default function DocumentsPanel({
   scopeKind?: "sale" | "expense";
   onEditingChange?: (editing: boolean) => void;
   aiScan?: boolean;
+  demo?: boolean;
   start?: { kind: "sale" | "expense"; file?: File };
   onStarted?: () => void;
 }) {
@@ -150,7 +152,7 @@ export default function DocumentsPanel({
       for (let i = 0; i < bytes.length; i += 32768)
         binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
       const result = await api(
-        "/ai/invoice-scan",
+        demo ? "/demo-ai/invoice-scan" : "/ai/invoice-scan",
         {
           kind: scanKind,
           file: { name: file.name, type: file.type, data: btoa(binary) },

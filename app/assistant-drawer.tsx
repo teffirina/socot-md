@@ -2,15 +2,18 @@
 import { MessageSquare, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import AiPanel from "./ai-panel";
+import type { Invoice } from "../lib/domain";
 
 // "Asistent Socot" button for the header; the assistant opens in a small side panel.
 export default function AssistantDrawer({
   demo,
+  invoices,
   role,
   company,
   navigate,
 }: {
   demo: boolean;
+  invoices: Invoice[];
   role: string;
   company: string;
   navigate: (view: string) => void;
@@ -55,6 +58,7 @@ export default function AssistantDrawer({
           <div className="assistant-body">
             <AiPanel
               demo={demo}
+              invoices={invoices}
               role={role}
               navigate={(view) => {
                 setOpen(false);

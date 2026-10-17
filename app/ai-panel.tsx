@@ -1,21 +1,29 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import type { AiSearchResult, AiProposal } from "../lib/ai";
+import {
+  aiSearchSchema,
+  filterDocuments,
+  type AiSearchResult,
+  type AiProposal,
+} from "../lib/ai";
+import type { Invoice } from "../lib/domain";
 import { can } from "../lib/permissions";
 const money = (n: number) =>
   (n / 100).toLocaleString("ro-MD", { style: "currency", currency: "MDL" });
 export default function AiPanel({
   demo,
+  invoices,
   role,
   navigate,
 }: {
   demo: boolean;
+  invoices: Invoice[];
   role: string;
   navigate: (view: string) => void;
 }) {
   const [configured, setConfigured] = useState(false);
-  const [checking, setChecking] = useState(!demo);
+  const [checking, setChecking] = useState(true);
   const [question, setQuestion] = useState("");
   const [result, setResult] = useState<AiSearchResult | null>(null);
   const [proposal, setProposal] = useState<AiProposal | null>(null);
@@ -23,20 +31,21 @@ export default function AiPanel({
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    if (!demo)
-      api("/ai/status")
-        .then((r) => {
-          if (active) setConfigured(r.configured);
-        })
-        .catch(() => {
-          if (active)
-            setError(
-              "Serverul nu este disponibil. AI necesită o conexiune la internet.",
-            );
-        })
-        .finally(() => {
-          if (active) setChecking(false);
-        });
+    api(demo ? "/demo-ai/status" : "/ai/status")
+      .then((r) => {
+        if (active) setConfigured(r.configured);
+      })
+      .catch(() => {
+        if (active)
+          setError(
+            demo
+              ? "AI în modul demonstrativ funcționează când serverul Socot rulează pe acest calculator."
+              : "Serverul nu este disponibil. AI necesită o conexiune la internet.",
+          );
+      })
+      .finally(() => {
+        if (active) setChecking(false);
+      });
     return () => {
       active = false;
     };
@@ -47,7 +56,16 @@ export default function AiPanel({
     setResult(null);
     setProposal(null);
     try {
-      setResult(await api("/ai/search", { question }));
+      if (demo) {
+        // Only the question leaves the browser; demo documents are filtered here.
+        const { filters } = await api("/demo-ai/interpret", { question });
+        const parsed = aiSearchSchema.parse(filters);
+        if (parsed.intent !== "search")
+          throw Error(
+            "Pot căuta documente după partener, referință, tip, perioadă și sold neachitat.",
+          );
+        setResult(filterDocuments(invoices, parsed));
+      } else setResult(await api("/ai/search", { question }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Căutarea nu a reușit.");
     } finally {
@@ -75,12 +93,7 @@ export default function AiPanel({
         îți arată propunerea Dt/Ct după regulile aprobate. Sugestiile sunt de
         verificat de contabil.
       </p>
-      {demo ? (
-        <p role="status" className="ai-note">
-          AI lucrează în contul conectat, după ce cheia AI este pusă pe server.
-          Modul demonstrativ nu trimite date către AI.
-        </p>
-      ) : checking ? (
+      {checking ? (
         <p role="status" className="ai-note">
           Se verifică disponibilitatea AI…
         </p>
@@ -114,7 +127,7 @@ export default function AiPanel({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (!busy && configured && !demo) void search();
+          if (!busy && configured) void search();
         }}
       >
         <label htmlFor="ai-question" className="sr-only">
@@ -129,11 +142,9 @@ export default function AiPanel({
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="De exemplu: cât avem de încasat de la clientul X?"
-          disabled={demo || !configured || busy}
+          disabled={!configured || busy}
         />
-        <button
-          disabled={demo || !configured || busy || question.trim().length < 3}
-        >
+        <button disabled={!configured || busy || question.trim().length < 3}>
           {busy ? "Se procesează…" : "Întreabă"}
         </button>
       </form>
@@ -199,7 +210,7 @@ export default function AiPanel({
                         <small>Neachitat {money(d.total - d.paid)}</small>
                       )}
                     </div>
-                    {can(role, "journal.read") && (
+                    {!demo && can(role, "journal.read") && (
                       <button
                         className="textbutton"
                         disabled={busy}
