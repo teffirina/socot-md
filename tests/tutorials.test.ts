@@ -4,7 +4,12 @@ import { readFileSync } from "node:fs";
 import { parseCompleted, tutorialForView, tutorials } from "../lib/tutorials";
 
 test("fiecare tutorial are pași compleți, cu ținte existente în interfață", () => {
-  const ui = ["app/page.tsx", "app/documents-panel.tsx", "app/reconciliation-panel.tsx"]
+  const ui = [
+    "app/page.tsx",
+    "app/home-dashboard.tsx",
+    "app/documents-panel.tsx",
+    "app/reconciliation-panel.tsx",
+  ]
     .map((f) => readFileSync(f, "utf8"))
     .join("\n");
   for (const t of Object.values(tutorials)) {
