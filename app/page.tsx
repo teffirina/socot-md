@@ -973,6 +973,7 @@ export default function Page() {
           {(view === "Documente" || !!scopedKind) && (
             <DocumentsPanel
               key={view}
+              aiScan={!demo && writable}
               scopeKind={scopedKind}
               onEditingChange={setDocumentDirty}
               snapshot={state}

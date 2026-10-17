@@ -7,7 +7,7 @@ export class ApiError extends Error {
     super(data.error ?? `API: ${status}`);
   }
 }
-export async function api(path: string, body?: unknown) {
+export async function api(path: string, body?: unknown, timeout = 12000) {
   let status: number, data: any;
   if (desktop()) {
     const { invoke } = await import("@tauri-apps/api/core");
@@ -23,7 +23,7 @@ export async function api(path: string, body?: unknown) {
         credentials: "include",
         headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(timeout),
       },
     );
     status = response.status;

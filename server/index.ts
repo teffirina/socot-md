@@ -40,7 +40,11 @@ app.use(
   }),
 );
 app.use(cors({ origin, credentials: true }));
-app.use(express.json({ limit: "32kb" }));
+// Invoice scans carry a base64 file and are parsed after authentication.
+const smallJson = express.json({ limit: "32kb" });
+app.use((req, res, next) =>
+  req.path === "/api/ai/invoice-scan" ? next() : smallJson(req, res, next),
+);
 app.use(cookieParser());
 app.use("/api", rateLimit({ windowMs: 60_000, limit: 120 }));
 app.use("/api", (req, res, next) => {

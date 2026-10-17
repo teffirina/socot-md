@@ -113,6 +113,7 @@ async fn api_request(path: String, body: Option<Value>) -> Result<Value, String>
         "/ai/status",
         "/ai/search",
         "/ai/proposal",
+        "/ai/invoice-scan",
         "/login",
         "/catalog",
         "/legislation/search",
@@ -135,7 +136,7 @@ async fn api_request(path: String, body: Option<Value>) -> Result<Value, String>
         return Err("Rută nepermisă".into());
     }
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(12))
+        .timeout(std::time::Duration::from_secs(if path == "/ai/invoice-scan" { 100 } else { 12 }))
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| e.to_string())?;
