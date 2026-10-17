@@ -1,12 +1,11 @@
 "use client";
-import AiPanel from "./ai-panel";
+import AssistantDrawer from "./assistant-drawer";
 import SocotSheetsPanel from "./socot-sheets-panel";
 import DocumentsPanel from "./documents-panel";
 import ModuleWorkspace from "./module-workspace";
 import {
   workspaces,
   workspaceParent,
-  normalizeSearch,
 } from "../lib/workspaces";
 import {
   catalogNames,
@@ -14,8 +13,6 @@ import {
   canReadCatalog,
   type CatalogKind,
 } from "../lib/catalog";
-import { documentAmount } from "../lib/document-workflow";
-import PartnerFields from "./partner-fields";
 import CatalogPanel from "./catalog-panel";
 import packageInfo from "../package.json";
 import ExpensesPanel from "./expenses-panel";
@@ -25,14 +22,15 @@ import LedgerPanel from "./ledger-panel";
 import ReconciliationPanel from "./reconciliation-panel";
 import TutorialButton from "./tutorial";
 import HomeDashboard from "./home-dashboard";
-import { navIcons } from "./nav-icons";
+import SideNav from "./side-nav";
+import NewMenu from "./new-menu";
 import { todayLine } from "../lib/dashboard";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { desktop, readValue, writeValue, type Snapshot } from "../lib/storage";
 import { SyncEngine } from "../lib/sync";
-import { totals, invoiceSchema, type Invoice } from "../lib/domain";
+import { totals, type Invoice } from "../lib/domain";
 const money = (v: number) =>
   new Intl.NumberFormat("ro-MD", { style: "currency", currency: "MDL" }).format(
     v / 100,
@@ -53,7 +51,10 @@ export default function Page() {
     [documentDirty, setDocumentDirty] = useState(false),
     [pendingNavigation, setPendingNavigation] = useState<string | null>(null),
     [reportView, setReportView] = useState("Creanțe"),
-    [form, setForm] = useState(false),
+    [newDocument, setNewDocument] = useState<{
+      kind: "sale" | "expense";
+      file?: File;
+    }>(),
     [busy, setBusy] = useState(false),
     [query, setQuery] = useState(""),
     [update, setUpdate] = useState<any>(null),
@@ -95,7 +96,9 @@ export default function Page() {
       ? catalogNames[catalogKind]
       : view === "Cheltuieli"
         ? "Datorii și plăți furnizori"
-        : view;
+        : view === "Acasă"
+          ? "Privire de ansamblu"
+          : view;
 
   const sales = state.invoices.filter((i) => i.kind !== "expense");
   const sum = totals(sales);
@@ -212,35 +215,6 @@ export default function Page() {
         password: f.get("password"),
       });
       await start(result.user);
-    });
-  }
-  async function create(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    await action(async () => {
-      const invoice = invoiceSchema.parse({
-        id: crypto.randomUUID(),
-        customer: f.get("customer"),
-        partnerId: f.get("partnerId") || null,
-        contractId: f.get("contractId") || null,
-        total: documentAmount(String(f.get("total"))),
-        paid: 0,
-        version: 0,
-        date: new Date().toISOString().slice(0, 10),
-      });
-      await engine.current!.saveDraft({
-        id: invoice.id,
-        customer: invoice.customer,
-        date: invoice.date,
-        total: invoice.total,
-        kind: "sale",
-        category: "",
-        partnerId: invoice.partnerId ?? null,
-        contractId: invoice.contractId ?? null,
-        revision: 0,
-      });
-      setForm(false);
-      setView("Documente");
     });
   }
   async function pay(e: React.FormEvent<HTMLFormElement>) {
@@ -470,78 +444,12 @@ export default function Page() {
             onChange={(e) => setNavQuery(e.target.value)}
           />
         </label>
-        <nav aria-label="Navigare principală">
-          {[
-            {
-              label: "SPAȚIUL MEU",
-              items: [
-                "Acasă",
-                "Documente",
-                "Spațiu de lucru",
-                ...(demo || can(session.role, "invoice.read")
-                  ? ["Asistent AI"]
-                  : []),
-              ],
-            },
-            {
-              label: "ACTIVITATE",
-              items: [
-                "Vânzări",
-                "Cumpărări",
-                "Bancă și casă",
-                "Depozit",
-                "Producție",
-                "Active",
-                "Personal și salarii",
-              ],
-            },
-            {
-              label: "EVIDENȚĂ ȘI RAPOARTE",
-              items: [
-                ...(demo || can(session.role, "journal.read")
-                  ? ["Contabilitate"]
-                  : []),
-                "Rapoarte",
-              ],
-            },
-            {
-              label: "ORGANIZARE",
-              items: ["Nomenclatoare", "Întreprindere", "Setări"],
-            },
-          ]
-            .map((group) => ({
-              ...group,
-              items: group.items.filter((v) =>
-                normalizeSearch(v).includes(normalizeSearch(navQuery)),
-              ),
-            }))
-            .filter((group) => group.items.length)
-            .map((group) => (
-              <div key={group.label}>
-                <p className="navlabel">{group.label}</p>
-                {group.items.map((v) => (
-                  <button
-                    key={v}
-                    className={workspaceParent(view) === v ? "active" : ""}
-                    aria-current={
-                      workspaceParent(view) === v ? "page" : undefined
-                    }
-                    onClick={() => setView(v)}
-                  >
-                    {(() => {
-                      const Icon = navIcons[v];
-                      return Icon ? (
-                        <Icon size={17} strokeWidth={1.8} aria-hidden />
-                      ) : (
-                        <span aria-hidden="true">{workspaces[v]?.icon}</span>
-                      );
-                    })()}
-                    {v}
-                  </button>
-                ))}
-              </div>
-            ))}
-        </nav>
+        <SideNav
+          active={workspaceParent(view)}
+          query={navQuery}
+          journal={demo || can(session.role, "journal.read")}
+          go={setView}
+        />
         <div className="asidebottom">
           <span className="pill">
             {native ? "DESKTOP" : "WEB"} · {packageInfo.version}
@@ -567,7 +475,18 @@ export default function Page() {
               Socot <span className="slash">/</span> {title}
             </span>
           </div>
-          <TutorialButton view={view} userId={session.id} />
+          <div className="header-actions">
+            <TutorialButton view={view} userId={session.id} />
+            {(demo || can(session.role, "invoice.read")) && (
+              <AssistantDrawer
+                key={`${demo}-${session.companyId}-${session.role}`}
+                demo={demo}
+                role={session.role}
+                company={demo ? (state.company?.name ?? "demonstrative") : "tale"}
+                navigate={setView}
+              />
+            )}
+          </div>
           <div className="connection" role="status">
             <i className={status.startsWith("Offline") ? "offline" : ""} />
             {demo
@@ -619,7 +538,6 @@ export default function Page() {
                     Întreprindere:
                       "Datele firmei, contactele și politica contabilă.",
                     Setări: "Conexiune, stocare locală și actualizări.",
-                    "Asistent AI": "Caută documente și verifică propunerile contabile.",
                     Nomenclatoare:
                       "Date de referință comune pentru documentele firmei.",
                   } as Record<string, string>
@@ -630,10 +548,18 @@ export default function Page() {
                     : "Date comune pentru documentele firmei.")}
               </p>
             </div>
-            {writable && ["Acasă", "Încasări clienți"].includes(view) && (
-              <button data-t="new-invoice" onClick={() => setForm(true)}>
-                ＋ Factură nouă
-              </button>
+            {writable && (
+              <NewMenu
+                canScan={!demo}
+                onNew={(kind) => {
+                  setNewDocument({ kind });
+                  setView(`documents:${kind}`);
+                }}
+                onScan={(kind, file) => {
+                  setNewDocument({ kind, file });
+                  setView(`documents:${kind}`);
+                }}
+              />
             )}
           </div>
           {error && (
@@ -932,6 +858,8 @@ export default function Page() {
             <DocumentsPanel
               key={view}
               aiScan={!demo && writable}
+              start={newDocument?.kind === scopedKind ? newDocument : undefined}
+              onStarted={() => setNewDocument(undefined)}
               scopeKind={scopedKind}
               onEditingChange={setDocumentDirty}
               snapshot={state}
@@ -940,9 +868,6 @@ export default function Page() {
               journalAccess={demo || can(session.role, "journal.read")}
               navigate={setView}
             />
-          )}
-          {view === "Asistent AI" && (
-            <AiPanel key={`${demo}-${session.companyId}-${session.role}`} demo={demo} role={session.role} navigate={setView} />
           )}
           {view === "Spațiu de lucru" && (
             <SocotSheetsPanel
@@ -1127,49 +1052,6 @@ export default function Page() {
                   Renunță
                 </button>
                 <button disabled={busy}>Confirmă încasarea</button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
-      {form && (
-        <div className="modalback">
-          <section
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="invoice-title"
-          >
-            <p className="eyebrow">DOCUMENT SOCOT</p>
-            <h2 id="invoice-title">Factură nouă</h2>
-            <p className="muted">Flux simplificat pentru servicii, fără TVA.</p>
-            <form onSubmit={create}>
-              <PartnerFields entries={state.catalog ?? []} />
-              <label>
-                Total (MDL)
-                <input
-                  name="total"
-                  required
-                  type="number"
-                  min="0.01"
-                  max="1000000"
-                  step="0.01"
-                  placeholder="0,00"
-                />
-              </label>
-              <p className="footnote">
-                Salvează ciorna, apoi verifică și confirmă documentul în
-                registrul Documente. Ciorna nu afectează soldurile.
-              </p>
-              <div className="controls">
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => setForm(false)}
-                >
-                  Renunță
-                </button>
-                <button disabled={busy}>Salvează ciorna</button>
               </div>
             </form>
           </section>

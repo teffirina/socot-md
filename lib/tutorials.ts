@@ -51,8 +51,8 @@ export const tutorials: Record<string, Tutorial> = {
       },
       {
         selector: '[data-t="new-invoice"]',
-        title: "Factură nouă",
-        body: "Pornești rapid o factură simplificată. Se salvează ca ciornă; o verifici și o confirmi în registrul Documente.",
+        title: "Document nou",
+        body: "„+ Nou” pornește o vânzare sau o cumpărare, ori scanează o factură cu AI. Documentul se salvează ca ciornă; îl verifici și îl confirmi înainte să intre în contabilitate.",
       },
       {
         selector: '[data-t="home-actions"]',

@@ -1328,8 +1328,6 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
   border-bottom: 1px solid var(--line);
 }
 .socot-organized .tutorial-button {
-  margin-left: auto;
-  margin-right: 16px;
   background: var(--ink);
   color: white;
   border-radius: 999px;
@@ -1679,4 +1677,238 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
     font-size: 15px;
     white-space: normal;
   }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Grouped menu. */
+.socot-organized > .socot-sidebar .side-nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 2px 0;
+  padding: 9px 12px;
+  text-align: left;
+}
+.socot-organized > .socot-sidebar .side-nav button.group span {
+  flex: 1;
+}
+.socot-organized > .socot-sidebar .side-nav button.group.current {
+  color: white;
+}
+.socot-organized > .socot-sidebar .side-nav .chevron {
+  opacity: 0.7;
+}
+.socot-organized > .socot-sidebar .side-nav button.sub {
+  padding: 7px 12px 7px 41px;
+  font-size: 13px;
+}
+.socot-organized > .socot-sidebar .side-nav {
+  margin-top: 16px;
+}
+
+/* Header actions: tutorial and the assistant. */
+.socot-organized .header-actions {
+  margin-left: auto;
+  margin-right: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.socot-organized .assistant-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 13px;
+  background: var(--lime);
+  color: var(--ink);
+  border-color: var(--lime);
+}
+.assistant-drawer {
+  position: fixed;
+  top: 70px;
+  right: 16px;
+  z-index: 60;
+  width: min(390px, calc(100vw - 32px));
+  max-height: calc(100vh - 90px);
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(16, 40, 35, 0.18);
+}
+.assistant-drawer .assistant-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  background: var(--sidebar);
+  color: white;
+}
+.assistant-drawer .assistant-head > div {
+  flex: 1;
+  display: grid;
+}
+.assistant-drawer .assistant-head strong {
+  font-size: 15px;
+}
+.assistant-drawer .assistant-head small {
+  color: var(--sidebar-fg);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.assistant-drawer .assistant-close {
+  background: none;
+  border: 0;
+  padding: 2px;
+  color: white;
+}
+.assistant-body {
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+.assistant-body .ai-panel form {
+  margin: 12px 0 6px;
+}
+.ai-intro {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.ai-note {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.ai-suggestions {
+  display: grid;
+  gap: 6px;
+}
+.ai-suggestions button {
+  text-align: left;
+  font-weight: 400;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--paper);
+}
+.ai-results {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: grid;
+  gap: 8px;
+}
+.ai-results li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.ai-results li > div {
+  display: grid;
+}
+.ai-results small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.ai-amounts {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.ai-results .textbutton {
+  justify-self: start;
+  padding: 0;
+}
+
+/* "+ Nou" menu. */
+.new-menu {
+  position: relative;
+}
+.new-menu > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.new-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  width: 280px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 14px 40px rgba(16, 40, 35, 0.14);
+}
+.new-menu-list button {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 500;
+  padding: 9px 10px;
+  border-radius: 8px;
+}
+.new-menu-list button:hover:not(:disabled) {
+  background: var(--highlight);
+  filter: none;
+}
+.new-menu-list button span {
+  display: grid;
+}
+.new-menu-list small {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 12px;
+}
+.new-menu-list hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 4px 0;
+}
+@media (max-width: 900px) {
+  .socot-organized .header-actions {
+    margin-right: 0;
+  }
+  .assistant-drawer {
+    top: 12px;
+    max-height: calc(100vh - 24px);
+  }
+}
+@media print {
+  .assistant-drawer,
+  .assistant-button,
+  .new-menu {
+    display: none !important;
+  }
+}
+[hidden] {
+  display: none !important;
+}
+.socot-organized > .socot-sidebar .side-nav button span {
+  font-size: inherit;
 }

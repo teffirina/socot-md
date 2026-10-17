@@ -54,8 +54,12 @@ export default function HomeDashboard({
   const current = months.at(-1)!;
   const structure = expenseStructure(invoices, current.key);
   const structureTotal = structure.reduce((s, [, v]) => s + v, 0);
-  const scale = niceMax(Math.max(...months.flatMap((m) => [m.sales, m.expenses])));
-  const profitScale = niceMax(Math.max(...months.map((m) => Math.abs(m.profit))));
+  const scale = niceMax(
+    Math.max(...months.flatMap((m) => [m.sales, m.expenses])),
+  );
+  const profitScale = niceMax(
+    Math.max(...months.map((m) => Math.abs(m.profit))),
+  );
   const progress = invoices.map((i) => documentProgress(i.id, snapshot));
   const flow = [
     {
@@ -78,7 +82,12 @@ export default function HomeDashboard({
       note: "Documente confirmate",
       view: "Documente",
     },
-    { label: "Balanța", count: null, note: "Solduri și rulaje", view: "Rapoarte" },
+    {
+      label: "Balanța",
+      count: null,
+      note: "Solduri și rulaje",
+      view: "Rapoarte",
+    },
   ];
   const recent = invoices
     .slice()
@@ -114,10 +123,30 @@ export default function HomeDashboard({
     },
   ].filter((x) => x !== null);
   const cards = [
-    { label: "Vânzări", value: b.sales, note: `${invoices.filter((i) => !isExpense(i)).length} documente de vânzare`, Icon: ArrowUpRight },
-    { label: "Cheltuieli", value: b.expenses, note: "Documente de cumpărare", Icon: ArrowDownLeft },
-    { label: "De încasat", value: b.receivable, note: `${b.openSales} facturi deschise`, Icon: Wallet },
-    { label: "De plătit", value: b.payable, note: `${b.openCosts} documente deschise`, Icon: Scale },
+    {
+      label: "Vânzări",
+      value: b.sales,
+      note: `${invoices.filter((i) => !isExpense(i)).length} documente de vânzare`,
+      Icon: ArrowUpRight,
+    },
+    {
+      label: "Cheltuieli",
+      value: b.expenses,
+      note: "Documente de cumpărare",
+      Icon: ArrowDownLeft,
+    },
+    {
+      label: "De încasat",
+      value: b.receivable,
+      note: `${b.openSales} facturi deschise`,
+      Icon: Wallet,
+    },
+    {
+      label: "De plătit",
+      value: b.payable,
+      note: `${b.openCosts} documente deschise`,
+      Icon: Scale,
+    },
   ];
   return (
     <div className="home-dashboard">
@@ -162,8 +191,12 @@ export default function HomeDashboard({
               <h2>Venituri și cheltuieli</h2>
             </div>
             <div className="home-legend">
-              <span><i className="sales" /> Venituri</span>
-              <span><i className="expenses" /> Cheltuieli</span>
+              <span>
+                <i className="sales" /> Venituri
+              </span>
+              <span>
+                <i className="expenses" /> Cheltuieli
+              </span>
             </div>
           </div>
           <svg
@@ -185,13 +218,29 @@ export default function HomeDashboard({
               const h = (v: number) => (v / scale) * 170;
               return (
                 <g key={m.key}>
-                  <rect className="sales" x={x} y={190 - h(m.sales)} width="28" height={h(m.sales)} rx="4">
+                  <rect
+                    className="sales"
+                    x={x}
+                    y={190 - h(m.sales)}
+                    width="28"
+                    height={h(m.sales)}
+                    rx="4"
+                  >
                     <title>{`${m.name}: venituri ${dashboardMoney(m.sales)}`}</title>
                   </rect>
-                  <rect className="expenses" x={x + 32} y={190 - h(m.expenses)} width="28" height={h(m.expenses)} rx="4">
+                  <rect
+                    className="expenses"
+                    x={x + 32}
+                    y={190 - h(m.expenses)}
+                    width="28"
+                    height={h(m.expenses)}
+                    rx="4"
+                  >
                     <title>{`${m.name}: cheltuieli ${dashboardMoney(m.expenses)}`}</title>
                   </rect>
-                  <text x={x + 30} y="212" textAnchor="middle">{m.label}</text>
+                  <text x={x + 30} y="212" textAnchor="middle">
+                    {m.label}
+                  </text>
                 </g>
               );
             })}
@@ -200,10 +249,15 @@ export default function HomeDashboard({
             <p className="eyebrow">Profit lunar</p>
             <div className="home-profit-bars">
               {months.map((m) => (
-                <div key={m.key} title={`${m.name}: ${dashboardMoney(m.profit)}`}>
+                <div
+                  key={m.key}
+                  title={`${m.name}: ${dashboardMoney(m.profit)}`}
+                >
                   <span
                     className={m.profit < 0 ? "loss" : ""}
-                    style={{ height: `${Math.max(4, (Math.abs(m.profit) / profitScale) * 56)}px` }}
+                    style={{
+                      height: `${Math.max(4, (Math.abs(m.profit) / profitScale) * 56)}px`,
+                    }}
                   />
                   <small>{m.label}</small>
                 </div>
@@ -234,7 +288,9 @@ export default function HomeDashboard({
               ))}
             </ul>
           ) : (
-            <p className="muted">Nu există cheltuieli înregistrate în această lună.</p>
+            <p className="muted">
+              Nu există cheltuieli înregistrate în această lună.
+            </p>
           )}
         </section>
       </div>
@@ -246,7 +302,11 @@ export default function HomeDashboard({
               <p className="eyebrow">Registru</p>
               <h2>Documente recente</h2>
             </div>
-            <button type="button" className="textbutton" onClick={() => go("Documente")}>
+            <button
+              type="button"
+              className="textbutton"
+              onClick={() => go("Documente")}
+            >
               Toate documentele <ArrowRight size={14} aria-hidden />
             </button>
           </div>
@@ -271,20 +331,32 @@ export default function HomeDashboard({
                       <td>
                         <strong>{i.customer}</strong>
                         <small className="num">
-                          {i.sourceRef?.slice(0, 18) ?? i.id.slice(0, 8).toUpperCase()}
+                          {i.sourceRef?.slice(0, 18) ??
+                            i.id.slice(0, 8).toUpperCase()}
                         </small>
                       </td>
                       <td>{isExpense(i) ? "Cumpărare" : "Vânzare"}</td>
-                      <td className="num right">{dashboardMoney(i.total, false)}</td>
+                      <td className="num right">
+                        {dashboardMoney(i.total, false)}
+                      </td>
                       <td>
-                        <span className={`status-pill ${statusTone[state] ?? "muted"}`}>{state}</span>
+                        <span
+                          className={`status-pill ${statusTone[state] ?? "muted"}`}
+                        >
+                          {state}
+                        </span>
                       </td>
                       <td>
                         {writable && !isExpense(i) && i.paid < i.total && (
                           <button
                             type="button"
                             className="textbutton"
-                            disabled={busy || snapshot.pending.some((p) => p.invoice.id === i.id)}
+                            disabled={
+                              busy ||
+                              snapshot.pending.some(
+                                (p) => p.invoice.id === i.id,
+                              )
+                            }
                             onClick={() => onPay(i)}
                           >
                             Încasează
@@ -316,7 +388,9 @@ export default function HomeDashboard({
             {next.map((item) => (
               <li key={item.title}>
                 <button type="button" onClick={() => go(item.view)}>
-                  {item.view === "Spațiu de lucru" && <FileSpreadsheet size={16} aria-hidden />}
+                  {item.view === "Spațiu de lucru" && (
+                    <FileSpreadsheet size={16} aria-hidden />
+                  )}
                   <span>
                     <strong>{item.title}</strong>
                     <small>{item.note}</small>
@@ -334,7 +408,9 @@ export default function HomeDashboard({
 
 function compact(bani: number) {
   const lei = bani / 100;
-  if (lei >= 1_000_000) return `${(lei / 1_000_000).toLocaleString("ro-MD", { maximumFractionDigits: 1 })} mil.`;
-  if (lei >= 1000) return `${(lei / 1000).toLocaleString("ro-MD", { maximumFractionDigits: 1 })} mii`;
+  if (lei >= 1_000_000)
+    return `${(lei / 1_000_000).toLocaleString("ro-MD", { maximumFractionDigits: 1 })} mil.`;
+  if (lei >= 1000)
+    return `${(lei / 1000).toLocaleString("ro-MD", { maximumFractionDigits: 1 })} mii`;
   return lei.toLocaleString("ro-MD", { maximumFractionDigits: 0 });
 }

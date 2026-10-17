@@ -69,31 +69,47 @@ export default function AiPanel({
     }
   }
   return (
-    <section className="panel ai-panel" aria-label="Asistent AI">
-      <h2>Asistent AI pentru contabil</h2>
-      <p>
-        Caută documente în română, apoi verifică propunerea Dt/Ct bazată pe
-        regulile aprobate ale firmei.
-      </p>
-      <p className="footnote">
-        Întrebarea se trimite serviciului OpenAI. Evită datele personale și
-        secretele în întrebare. Documentele găsite și regulile contabile rămân
-        pe serverul Socot. AI nu modifică documente și nu postează înregistrări.
+    <section className="ai-panel" aria-label="Asistent AI">
+      <p className="ai-intro">
+        Întreabă despre facturi și solduri. Socot caută în documentele firmei și
+        îți arată propunerea Dt/Ct după regulile aprobate. Sugestiile sunt de
+        verificat de contabil.
       </p>
       {demo ? (
-        <p role="status">
-          AI este disponibil în contul conectat, după configurarea serverului.
-          Modul demo nu trimite date către AI.
+        <p role="status" className="ai-note">
+          AI lucrează în contul conectat, după ce cheia AI este pusă pe server.
+          Modul demonstrativ nu trimite date către AI.
         </p>
       ) : checking ? (
-        <p role="status">Se verifică disponibilitatea AI…</p>
+        <p role="status" className="ai-note">
+          Se verifică disponibilitatea AI…
+        </p>
       ) : (
         !configured && (
-          <p role="status">
-            AI nu este configurat sau serverul nu este disponibil.
-            Contactează administratorul pentru activare.
+          <p role="status" className="ai-note">
+            AI nu este configurat pe server. Pune cheia în fișierul .env și
+            repornește Socot.
           </p>
         )
+      )}
+      {!result && !proposal && (
+        <div className="ai-suggestions">
+          {[
+            "Arată-mi facturile neachitate din luna curentă.",
+            "Care sunt cheltuielile din luna curentă?",
+            "Facturile de vânzare din ultimele 30 de zile.",
+            "Ce avem de plătit furnizorilor?",
+          ].map((q) => (
+            <button
+              key={q}
+              type="button"
+              className="secondary"
+              onClick={() => setQuestion(q)}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
       )}
       <form
         onSubmit={(e) => {
@@ -101,7 +117,9 @@ export default function AiPanel({
           if (!busy && configured && !demo) void search();
         }}
       >
-        <label htmlFor="ai-question">Ce documente cauți?</label>
+        <label htmlFor="ai-question" className="sr-only">
+          Întrebarea ta
+        </label>
         <textarea
           id="ai-question"
           rows={3}
@@ -110,15 +128,19 @@ export default function AiPanel({
           required
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Arată facturile de vânzare neachitate din septembrie 2026"
+          placeholder="De exemplu: cât avem de încasat de la clientul X?"
           disabled={demo || !configured || busy}
         />
         <button
           disabled={demo || !configured || busy || question.trim().length < 3}
         >
-          {busy ? "Se procesează…" : "Caută documente"}
+          {busy ? "Se procesează…" : "Întreabă"}
         </button>
       </form>
+      <p className="footnote">
+        Întrebarea se trimite serviciului OpenAI; evită datele personale în ea.
+        AI nu modifică documente și nu postează înregistrări.
+      </p>
       {error && (
         <p className="error" role="alert">
           {error}
@@ -160,46 +182,35 @@ export default function AiPanel({
             {!result.documents.length ? (
               <p>Nu există documente pentru filtrele de mai sus.</p>
             ) : (
-              <div className="tablewrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Document / partener</th>
-                      <th>Data</th>
-                      <th>Total</th>
-                      <th>Neachitat</th>
-                      <th>Verificare</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.documents.map((d) => (
-                      <tr key={d.id}>
-                        <td>
-                          {d.sourceRef || d.id}
-                          <br />
-                          {d.customer}
-                        </td>
-                        <td>{d.date}</td>
-                        <td>{money(d.total)}</td>
-                        <td>{money(d.total - d.paid)}</td>
-                        <td>
-                          {can(role, "journal.read") ? (
-                            <button
-                              className="secondary"
-                              disabled={busy}
-                              onClick={() => void inspect(d.id)}
-                            >
-                              Document și propunere Dt/Ct
-                            </button>
-                          ) : (
-                            <span>Consultă documentul în Documente</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ul className="ai-results">
+                {result.documents.map((d) => (
+                  <li key={d.id}>
+                    <div>
+                      <strong>{d.customer}</strong>
+                      <small>
+                        {d.date} ·{" "}
+                        {d.kind === "expense" ? "Cumpărare" : "Vânzare"}
+                        {d.sourceRef ? ` · ${d.sourceRef}` : ""}
+                      </small>
+                    </div>
+                    <div className="ai-amounts">
+                      <span>{money(d.total)}</span>
+                      {d.paid < d.total && (
+                        <small>Neachitat {money(d.total - d.paid)}</small>
+                      )}
+                    </div>
+                    {can(role, "journal.read") && (
+                      <button
+                        className="textbutton"
+                        disabled={busy}
+                        onClick={() => void inspect(d.id)}
+                      >
+                        Propunere Dt/Ct
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
           </>
         )}

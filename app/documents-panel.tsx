@@ -28,6 +28,8 @@ export default function DocumentsPanel({
   scopeKind,
   onEditingChange,
   aiScan = false,
+  start,
+  onStarted,
 }: {
   snapshot: Snapshot;
   engine: SyncEngine;
@@ -37,6 +39,8 @@ export default function DocumentsPanel({
   scopeKind?: "sale" | "expense";
   onEditingChange?: (editing: boolean) => void;
   aiScan?: boolean;
+  start?: { kind: "sale" | "expense"; file?: File };
+  onStarted?: () => void;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState<DocumentDraft | null>(null);
@@ -50,6 +54,14 @@ export default function DocumentsPanel({
   const [busy, setBusy] = useState(false);
   const [scanNotes, setScanNotes] = useState<string[]>([]);
   const scanInput = useRef<HTMLInputElement>(null);
+  // Opened from the "+ Nou" menu: start the blank document or the scan once.
+  useEffect(() => {
+    if (!start) return;
+    onStarted?.();
+    if (start.file) void scan(start.file, start.kind);
+    else create(start.kind);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start]);
   useEffect(() => {
     onEditingChange?.(!!editing);
     const guard = (event: BeforeUnloadEvent) => {

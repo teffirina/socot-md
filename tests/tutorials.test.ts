@@ -7,6 +7,7 @@ test("fiecare tutorial are pași compleți, cu ținte existente în interfață"
   const ui = [
     "app/page.tsx",
     "app/home-dashboard.tsx",
+    "app/new-menu.tsx",
     "app/documents-panel.tsx",
     "app/reconciliation-panel.tsx",
   ]
