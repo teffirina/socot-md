@@ -286,7 +286,7 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
   Active: {
     title: "Active",
     icon: "▣",
-    subtitle: "Evidența de referință a mijloacelor fixe și a responsabililor.",
+    subtitle: "Mijloace fixe, obiecte în construcție și uzura calculată automat.",
     steps: [],
     groups: [
       {
@@ -295,18 +295,17 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
           catalog(
             "asset",
             "Registrul mijloacelor fixe",
-            "Fișe de referință, locație și responsabil. Fără amortizare automată.",
+            "Fișe cu valoare, durată, locație și responsabil; uzura se calculează din ele.",
           ),
           catalog("warehouse", "Locații", "Locurile de păstrare a bunurilor."),
         ],
       },
     ],
     pending: [
-      "Intrare și punere în funcțiune",
       "Active necorporale și terenuri",
       "Transfer, modernizare și inventariere",
       "Leasing și răscumpărare",
-      "Amortizare contabilă și fiscală",
+      "Amortizare fiscală și metode degresive",
       "Ieșire, casare și rapoarte specifice",
     ],
   },

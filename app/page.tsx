@@ -5,6 +5,8 @@ import DocumentsPanel from "./documents-panel";
 import ModuleWorkspace from "./module-workspace";
 import StockPanel from "./stock-panel";
 import ProductionPanel from "./production-panel";
+import DepreciationPanel from "./depreciation-panel";
+import ConstructionPanel from "./construction-panel";
 import { workspaces, workspaceParent } from "../lib/workspaces";
 import {
   catalogNames,
@@ -23,6 +25,7 @@ import TutorialButton from "./tutorial";
 import HomeDashboard from "./home-dashboard";
 import SideNav from "./side-nav";
 import NewMenu from "./new-menu";
+import Import1CDialog from "./import-1c-dialog";
 import { dashboardMoney, monthlyTotals, todayLine } from "../lib/dashboard";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
@@ -54,6 +57,7 @@ export default function Page() {
       kind: "sale" | "expense";
       file?: File;
     }>(),
+    [import1C, setImport1C] = useState(false),
     [busy, setBusy] = useState(false),
     [query, setQuery] = useState(""),
     [update, setUpdate] = useState<any>(null),
@@ -577,6 +581,7 @@ export default function Page() {
                     setNewDocument({ kind, file });
                     setView(`documents:${kind}`);
                   }}
+                  onImport1C={() => setImport1C(true)}
                 />
               )}
             </div>
@@ -677,6 +682,22 @@ export default function Page() {
               journalAccess={demo || can(session.role, "journal.read")}
               personnelAccess={demo || canReadCatalog(session.role, "employee")}
               navigate={setView}
+            />
+          )}
+          {view === "Active" && engine.current && (
+            <DepreciationPanel
+              key={engine.current.scope}
+              engine={engine.current}
+              snapshot={state}
+              writable={writable}
+              navigate={setView}
+            />
+          )}
+          {view === "Active" && engine.current && (
+            <ConstructionPanel
+              key={`${engine.current.scope}-construction`}
+              engine={engine.current}
+              writable={writable}
             />
           )}
           {view === "Producție" && engine.current && (
@@ -904,6 +925,16 @@ export default function Page() {
               writable={writable}
               journalAccess={demo || can(session.role, "journal.read")}
               navigate={setView}
+            />
+          )}
+          {import1C && engine.current && (
+            <Import1CDialog
+              engine={engine.current}
+              onClose={() => setImport1C(false)}
+              onDone={(next) => {
+                setImport1C(false);
+                setView(next);
+              }}
             />
           )}
           {view === "Spațiu de lucru" && (

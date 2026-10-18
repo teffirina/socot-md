@@ -257,10 +257,16 @@ export default function CatalogPanel({
           documente.
         </p>
       )}
-      {["employee", "asset"].includes(kind) && (
+      {kind === "employee" && (
         <p className="footnote">
-          Registru de identificare; calculul salariilor și amortizarea sunt
-          module distincte, încă neimplementate.
+          Registru de identificare; calculul salariilor este un modul distinct,
+          încă neimplementat.
+        </p>
+      )}
+      {kind === "asset" && (
+        <p className="footnote">
+          Completează data punerii în funcțiune, valoarea de intrare și durata
+          în luni: uzura lunară se propune automat în secțiunea Active.
         </p>
       )}
       {edit && (

@@ -1,6 +1,7 @@
 "use client";
 import {
   ChevronDown,
+  DatabaseZap,
   FilePlus2,
   Plus,
   ScanLine,
@@ -16,9 +17,11 @@ type Kind = "sale" | "expense";
 export default function NewMenu({
   onNew,
   onScan,
+  onImport1C,
 }: {
   onNew: (kind: Kind) => void;
   onScan: (kind: Kind, file: File) => void;
+  onImport1C: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState(false);
@@ -101,6 +104,17 @@ export default function NewMenu({
             <span>
               Scanează cu telefonul
               <small>Poză sau PDF, prin cod QR</small>
+            </span>
+          </button>
+          <hr />
+          <button
+            role="menuitem"
+            onClick={() => (setOpen(false), onImport1C())}
+          >
+            <DatabaseZap size={16} aria-hidden />
+            <span>
+              Importă din 1C
+              <small>Documente sau contragenți, din Excel/CSV</small>
             </span>
           </button>
         </div>

@@ -2076,3 +2076,109 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
 .production .depreciation-month select {
   max-width: 360px;
 }
+/* Depreciation proposals in Active. */
+.depreciation {
+  margin-top: 20px;
+}
+.depreciation-month {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.depreciation td small {
+  display: block;
+  max-width: 220px;
+  white-space: normal;
+}
+.depreciation-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.depreciation-actions button {
+  padding: 6px 12px;
+}
+.depreciation-foot {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0 6px;
+}
+.depreciation-incomplete ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+/* Objects under construction in Active. */
+.construction {
+  margin-top: 20px;
+}
+.construction h3 {
+  margin: 20px 0 8px;
+}
+.construction td small,
+.construction header small {
+  display: block;
+  white-space: normal;
+}
+.construction-list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+}
+.construction-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.construction-item header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+.construction-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 10px 0 6px;
+  color: var(--muted);
+}
+.construction-figures b {
+  color: var(--ink);
+  margin-left: 4px;
+}
+.construction-item meter {
+  width: 100%;
+  height: 8px;
+}
+.construction-detail {
+  margin-top: 10px;
+}
+/* Import from 1C. */
+.import-1c {
+  max-width: 820px;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+.import-1c-file input {
+  display: block;
+  margin-top: 6px;
+}
+.import-1c-kind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.import-1c-table {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 8px 0;
+}
+.import-1c-result ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
