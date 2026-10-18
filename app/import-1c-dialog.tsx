@@ -3,10 +3,22 @@ import { useState } from "react";
 import type { CatalogEntry } from "../lib/catalog";
 import { dashboardDate, dashboardMoney } from "../lib/dashboard";
 import type { Invoice } from "../lib/domain";
-import { read1C, type Kind, type Read1C } from "../lib/import-1c";
+import {
+  amount1C,
+  blankLayout,
+  detect1C,
+  documentFields,
+  partnerFields,
+  read1C,
+  requiredFields,
+  type Kind,
+  type Layout,
+  type Read1C,
+} from "../lib/import-1c";
 import { gridFrom1CFile } from "../lib/import-1c-file";
+import { checkTotals, partnerBalances } from "../lib/import-check";
 import type { SyncEngine } from "../lib/sync";
-import { duplicateKey } from "../lib/workbook";
+import { duplicateKey, type Grid } from "../lib/workbook";
 
 async function stableId(text: string) {
   const h = Array.from(
@@ -21,15 +33,42 @@ async function stableId(text: string) {
 const same = (a: string, b: string) =>
   a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
 
+type Status = "new" | "duplicate" | "error";
 type Prepared =
   | {
       type: "documents";
-      items: { line: number; doc?: Invoice; note: string }[];
+      items: {
+        line: number;
+        doc?: Invoice;
+        note: string;
+        status: Status;
+        total: number;
+      }[];
     }
   | {
       type: "partners";
-      items: { line: number; entry?: CatalogEntry; note: string }[];
+      items: {
+        line: number;
+        entry?: CatalogEntry;
+        note: string;
+        status: Status;
+      }[];
     };
+
+const letter = (i: number) =>
+  i < 26
+    ? String.fromCharCode(65 + i)
+    : String.fromCharCode(64 + Math.floor(i / 26)) +
+      String.fromCharCode(65 + (i % 26));
+const money = (bani: number) => dashboardMoney(bani, false);
+const optionalLei = (text: string) => {
+  if (!text.trim()) return null;
+  try {
+    return amount1C(text);
+  } catch {
+    return undefined;
+  }
+};
 
 // Brings lists saved from 1C (documents or counterparties) into Socot.
 export default function Import1CDialog({
@@ -42,6 +81,14 @@ export default function Import1CDialog({
   onDone: (view: string) => void;
 }) {
   const [file, setFile] = useState("");
+  const [grid, setGrid] = useState<Grid | null>(null);
+  const [layout, setLayout] = useState<Layout | null>(null);
+  const [showColumns, setShowColumns] = useState(false);
+  const [typedTotal, setTypedTotal] = useState("");
+  const [typedBalances, setTypedBalances] = useState<Record<string, string>>(
+    {},
+  );
+  const [confirmed, setConfirmed] = useState(false);
   const [read, setRead] = useState<Read1C | null>(null);
   const [fallback, setFallback] = useState<Kind>("expense");
   const [prepared, setPrepared] = useState<Prepared | null>(null);
@@ -60,7 +107,8 @@ export default function Import1CDialog({
       const catalog = (state.catalog ?? []).filter((e) => e.kind === "partner");
       const seen: CatalogEntry[] = [];
       const items = r.rows.map((row) => {
-        if (row.error) return { line: row.line, note: row.error };
+        if (row.error)
+          return { line: row.line, note: row.error, status: "error" as const };
         const code = row.code || `1C-${row.line}`;
         const twin = [...catalog, ...seen].find(
           (e) =>
@@ -68,7 +116,14 @@ export default function Import1CDialog({
             same(e.name, row.name) ||
             (row.idno && e.details.idno === row.idno),
         );
-        if (twin) return { line: row.line, note: `Există deja: ${twin.name}` };
+        if (twin)
+          return {
+            line: row.line,
+            note: seen.includes(twin)
+              ? `Apare de două ori în fișier: ${twin.name}`
+              : `Există deja: ${twin.name}`,
+            status: "duplicate" as const,
+          };
         const entry: CatalogEntry = {
           id: crypto.randomUUID(),
           kind: "partner",
@@ -84,7 +139,7 @@ export default function Import1CDialog({
           },
         };
         seen.push(entry);
-        return { line: row.line, entry, note: "Nou" };
+        return { line: row.line, entry, note: "Nou", status: "new" as const };
       });
       setPrepared({ type: "partners", items });
       return;
@@ -100,9 +155,16 @@ export default function Import1CDialog({
       ...state.invoices.map(duplicateKey),
       ...state.pending.map((p) => duplicateKey(p.invoice)),
     ]);
+    const inFile = new Map<string, number>();
     const items = await Promise.all(
       r.rows.map(async (row) => {
-        if (row.error) return { line: row.line, note: row.error };
+        if (row.error)
+          return {
+            line: row.line,
+            note: row.error,
+            status: "error" as const,
+            total: row.total,
+          };
         const docKind = row.kind ?? kind;
         const partner = partners.find(
           (p) =>
@@ -124,14 +186,52 @@ export default function Import1CDialog({
           version: 0,
           date: row.date,
         };
-        if (taken.has(doc.id) || keys.has(duplicateKey(doc)))
-          return { line: row.line, note: "Există deja în Socot" };
-        taken.add(doc.id);
-        keys.add(duplicateKey(doc));
-        return { line: row.line, doc, note: "Nou" };
+        const twin = inFile.get(doc.id) ?? inFile.get(duplicateKey(doc));
+        if (
+          twin !== undefined ||
+          taken.has(doc.id) ||
+          keys.has(duplicateKey(doc))
+        )
+          return {
+            line: row.line,
+            note:
+              twin !== undefined
+                ? `Apare de două ori în fișier (rândul ${twin})`
+                : "Există deja în Socot",
+            status: "duplicate" as const,
+            total: row.total,
+          };
+        inFile.set(doc.id, row.line);
+        inFile.set(duplicateKey(doc), row.line);
+        return {
+          line: row.line,
+          doc,
+          note: "Nou",
+          status: "new" as const,
+          total: row.total,
+        };
       }),
     );
     setPrepared({ type: "documents", items });
+  }
+
+  // Reads the grid with the chosen columns; a missing column leaves the
+  // column picker open with the reason.
+  async function apply(g: Grid, l: Layout, kind = fallback) {
+    setError("");
+    setPrepared(null);
+    setRead(null);
+    setConfirmed(false);
+    try {
+      const r = read1C(g, l);
+      setRead(r);
+      const k = r.type === "documents" ? (r.defaultKind ?? kind) : kind;
+      setFallback(k);
+      await prepare(r, k);
+    } catch (e) {
+      setShowColumns(true);
+      setError((e as Error).message);
+    }
   }
 
   async function choose(f: File) {
@@ -139,20 +239,33 @@ export default function Import1CDialog({
     setResult(null);
     setPrepared(null);
     setRead(null);
+    setGrid(null);
+    setTypedTotal("");
+    setTypedBalances({});
     setBusy(true);
     try {
-      const r = read1C(await gridFrom1CFile(await f.arrayBuffer(), f.name));
+      const g = await gridFrom1CFile(await f.arrayBuffer(), f.name);
+      const found = detect1C(g);
+      const l = found ?? blankLayout(g);
       setFile(f.name);
-      setRead(r);
-      const kind =
-        r.type === "documents" ? (r.defaultKind ?? fallback) : fallback;
-      setFallback(kind);
-      await prepare(r, kind);
+      setGrid(g);
+      setLayout(l);
+      setShowColumns(!found);
+      if (found) await apply(g, l);
+      else
+        setError(
+          "Nu am recunoscut singur coloanele. Arată mai jos unde sunt data, contragentul și suma.",
+        );
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
+  }
+
+  function changeLayout(next: Layout) {
+    setLayout(next);
+    if (grid) void apply(grid, next);
   }
 
   async function run() {
@@ -196,9 +309,47 @@ export default function Import1CDialog({
     read && prepared
       ? prepared.items.map((item, i) => ({ item, row: read.rows[i] }))
       : [];
-  const ready = prepared?.items.filter((i) =>
-    "doc" in i ? !!i.doc : "entry" in i && !!i.entry,
-  ).length;
+  const ready = prepared?.items.filter((i) => i.status === "new").length;
+
+  const docs =
+    prepared?.type === "documents" && read?.type === "documents"
+      ? prepared.items
+      : null;
+  const typed = optionalLei(typedTotal);
+  const totals = docs
+    ? checkTotals(
+        docs,
+        read?.type === "documents" ? read.controlTotal : null,
+        typed ?? null,
+      )
+    : null;
+  const balances = docs
+    ? partnerBalances(
+        [
+          ...engine.state.invoices,
+          ...engine.state.pending.map((p) => p.invoice),
+        ],
+        docs.flatMap((i) => (i.doc ? [i.doc] : [])),
+      )
+    : [];
+  const balanceDiff = (key: string, after: number) => {
+    const v = optionalLei(typedBalances[key] ?? "");
+    return v === null ? null : v === undefined ? undefined : v - after;
+  };
+  const mismatch =
+    !!totals &&
+    (!!totals.fileDifference ||
+      !!totals.typedDifference ||
+      typed === undefined ||
+      balances.some((b) => {
+        const d = balanceDiff(b.key, b.after);
+        return d !== null && d !== 0;
+      }));
+  const header = grid && layout ? (grid[layout.header] ?? []) : [];
+  const width = grid
+    ? Math.min(40, Math.max(...grid.slice(0, 60).map((r) => r.length)))
+    : 0;
+  const sample = grid && layout ? (grid[layout.header + 1] ?? []) : [];
 
   return (
     <div className="modalback">
@@ -208,8 +359,8 @@ export default function Import1CDialog({
         aria-modal="true"
         aria-labelledby="import-1c-title"
       >
-        <p className="eyebrow">Import din 1C</p>
-        <h2 id="import-1c-title">Adu datele din 1C în Socot</h2>
+        <p className="eyebrow">Import din 1C sau Excel</p>
+        <h2 id="import-1c-title">Adu datele din 1C sau Excel în Socot</h2>
         {!read && !result && (
           <ol className="phone-steps">
             <li>
@@ -219,11 +370,16 @@ export default function Import1CDialog({
             <li>Alege perioada, apoi „Mai multe → Afișează lista…”.</li>
             <li>
               Salvează lista ca Excel (.xlsx) sau CSV și alege fișierul aici.
+              Merge și un tabel Excel făcut de mână: alegi tu coloanele.
+            </li>
+            <li>
+              Verifici rândurile, duplicatele și totalurile, apoi confirmi.
+              Nimic nu intră în Socot înainte de confirmare.
             </li>
           </ol>
         )}
         <label className="import-1c-file">
-          {read ? "Alege alt fișier" : "Alege fișierul din 1C"}
+          {grid ? "Alege alt fișier" : "Alege fișierul din 1C sau Excel"}
           <input
             type="file"
             accept=".xlsx,.csv,.txt"
@@ -239,6 +395,99 @@ export default function Import1CDialog({
           <p role="alert" className="error">
             {error}
           </p>
+        )}
+        {grid && layout && (
+          <details
+            className="import-columns"
+            open={showColumns}
+            onToggle={(e) =>
+              setShowColumns((e.target as HTMLDetailsElement).open)
+            }
+          >
+            <summary>
+              Coloanele fișierului: antetul pe rândul {layout.header + 1},{" "}
+              {layout.type === "documents" ? "documente" : "contragenți"}
+            </summary>
+            <div className="import-columns-grid">
+              <label>
+                Antetul este pe rândul
+                <select
+                  value={layout.header}
+                  disabled={busy}
+                  onChange={(e) =>
+                    changeLayout({ ...layout, header: Number(e.target.value) })
+                  }
+                >
+                  {grid.slice(0, 30).map((row, i) => (
+                    <option key={i} value={i}>
+                      {i + 1}:{" "}
+                      {row
+                        .filter((v) => v.trim())
+                        .slice(0, 3)
+                        .join(" · ")
+                        .slice(0, 60) || "(gol)"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Fișierul conține
+                <select
+                  value={layout.type}
+                  disabled={busy}
+                  onChange={(e) => {
+                    const type = e.target.value as Layout["type"];
+                    const found = detect1C(grid);
+                    changeLayout(
+                      found?.type === type
+                        ? found
+                        : { type, header: layout.header, columns: {} },
+                    );
+                  }}
+                >
+                  <option value="documents">Documente (facturi)</option>
+                  <option value="partners">Contragenți</option>
+                </select>
+              </label>
+              {Object.entries(
+                layout.type === "documents" ? documentFields : partnerFields,
+              ).map(([field, label]) => {
+                const f = field as keyof Layout["columns"];
+                const required = (
+                  requiredFields[layout.type] as string[]
+                ).includes(field);
+                return (
+                  <label key={field}>
+                    {label}
+                    {required ? " *" : ""}
+                    <select
+                      value={layout.columns[f] ?? -1}
+                      disabled={busy}
+                      onChange={(e) =>
+                        changeLayout({
+                          ...layout,
+                          columns: {
+                            ...layout.columns,
+                            [f]: Number(e.target.value),
+                          },
+                        })
+                      }
+                    >
+                      <option value={-1}>
+                        {required ? "Alege coloana" : "Nu există"}
+                      </option>
+                      {Array.from({ length: width }, (_, i) => (
+                        <option key={i} value={i}>
+                          {letter(i)}:{" "}
+                          {(header[i] || sample[i] || "").slice(0, 40)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+          </details>
         )}
         {read && prepared && (
           <>
@@ -310,7 +559,7 @@ export default function Import1CDialog({
                         <td className="num right">
                           {row.total ? dashboardMoney(row.total, false) : ""}
                         </td>
-                        <td className={item.note === "Nou" ? "" : "muted"}>
+                        <td className={item.status === "new" ? "" : "muted"}>
                           {item.note}
                         </td>
                       </tr>
@@ -320,7 +569,7 @@ export default function Import1CDialog({
                         <td>{row.code}</td>
                         <td>{row.name}</td>
                         <td className="num">{row.idno}</td>
-                        <td className={item.note === "Nou" ? "" : "muted"}>
+                        <td className={item.status === "new" ? "" : "muted"}>
                           {item.note}
                         </td>
                       </tr>
@@ -332,9 +581,158 @@ export default function Import1CDialog({
             {rows.length > 300 && (
               <p className="muted">Se arată primele 300 de rânduri.</p>
             )}
+            {totals && (
+              <section className="import-check" aria-label="Verificare">
+                <h3>Verificare înainte de import</h3>
+                <dl className="import-check-sums">
+                  <div>
+                    <dt>Toate rândurile din fișier</dt>
+                    <dd className="num">{money(totals.rows)}</dd>
+                  </div>
+                  <div>
+                    <dt>Se importă ({ready})</dt>
+                    <dd className="num">{money(totals.importing)}</dd>
+                  </div>
+                  <div>
+                    <dt>
+                      Duplicate, nu se importă (
+                      {docs!.filter((i) => i.status === "duplicate").length})
+                    </dt>
+                    <dd className="num">{money(totals.duplicates)}</dd>
+                  </div>
+                  {totals.errors > 0 && (
+                    <div>
+                      <dt>Rânduri cu erori</dt>
+                      <dd className="num">{totals.errors}</dd>
+                    </div>
+                  )}
+                </dl>
+                {totals.fileDifference !== null && (
+                  <p
+                    className={
+                      totals.fileDifference
+                        ? "import-check-bad"
+                        : "import-check-ok"
+                    }
+                  >
+                    {totals.fileDifference
+                      ? `Rândul „Total” din fișier arată ${money(totals.rows + totals.fileDifference)}, cu ${money(totals.fileDifference)} diferit de suma rândurilor. Verifică rândurile cu erori și filtrele din 1C.`
+                      : `Suma rândurilor coincide cu rândul „Total” din fișier.`}
+                  </p>
+                )}
+                <label className="import-check-typed">
+                  Totalul din 1C pentru aceeași listă (opțional)
+                  <input
+                    inputMode="decimal"
+                    value={typedTotal}
+                    placeholder="de ex. 125 000,00"
+                    onChange={(e) => {
+                      setTypedTotal(e.target.value);
+                      setConfirmed(false);
+                    }}
+                  />
+                </label>
+                {typed === undefined && (
+                  <p className="import-check-bad">
+                    Suma scrisă nu se poate citi.
+                  </p>
+                )}
+                {totals.typedDifference !== null && (
+                  <p
+                    className={
+                      totals.typedDifference
+                        ? "import-check-bad"
+                        : "import-check-ok"
+                    }
+                  >
+                    {totals.typedDifference
+                      ? `Totalul din 1C diferă de rândurile fișierului cu ${money(totals.typedDifference)}.`
+                      : "Totalul din 1C coincide cu rândurile fișierului."}
+                  </p>
+                )}
+                {balances.length > 0 && (
+                  <div className="tablewrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Contragent</th>
+                          <th className="right">Sold în Socot</th>
+                          <th className="right">Din import</th>
+                          <th className="right">Sold după import</th>
+                          <th className="right">Sold în 1C</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {balances.slice(0, 50).map((b) => {
+                          const d = balanceDiff(b.key, b.after);
+                          return (
+                            <tr key={b.key}>
+                              <td>
+                                {b.partner}
+                                <small className="muted">
+                                  {b.kind === "sale"
+                                    ? " creanță client"
+                                    : " datorie furnizor"}
+                                </small>
+                              </td>
+                              <td className="num right">{money(b.before)}</td>
+                              <td className="num right">{money(b.imported)}</td>
+                              <td className="num right">
+                                <strong>{money(b.after)}</strong>
+                              </td>
+                              <td className="right">
+                                <input
+                                  className="import-check-balance"
+                                  inputMode="decimal"
+                                  aria-label={`Sold în 1C pentru ${b.partner}`}
+                                  value={typedBalances[b.key] ?? ""}
+                                  onChange={(e) => {
+                                    setTypedBalances((t) => ({
+                                      ...t,
+                                      [b.key]: e.target.value,
+                                    }));
+                                    setConfirmed(false);
+                                  }}
+                                />
+                                {d !== null && (
+                                  <small
+                                    className={
+                                      d ? "import-check-bad" : "import-check-ok"
+                                    }
+                                  >
+                                    {d === undefined
+                                      ? "sumă invalidă"
+                                      : d
+                                        ? `diferă cu ${money(d)}`
+                                        : "coincide"}
+                                  </small>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {balances.length > 50 && (
+                  <p className="muted">Se arată primii 50 de contragenți.</p>
+                )}
+                {mismatch && (
+                  <label className="import-check-confirm">
+                    <input
+                      type="checkbox"
+                      checked={confirmed}
+                      onChange={(e) => setConfirmed(e.target.checked)}
+                    />
+                    Am verificat diferențele și vreau să import totuși.
+                  </label>
+                )}
+              </section>
+            )}
             <p className="footnote">
               {read.type === "documents"
-                ? "Documentele intră neachitate, cu articole contabile propuse pe care le verifici în Contabilitate. Plățile din 1C le adaugi apoi ca încasări sau plăți."
+                ? "Documentele intră neachitate, cu articole contabile propuse pe care le verifici în Contabilitate. Plățile din 1C le adaugi apoi ca încasări sau plăți, așa că soldul din 1C poate fi mai mic cu plățile deja făcute."
                 : "Contragenții intră în Nomenclatoare ca „client și furnizor”; poți schimba tipul după import."}
             </p>
           </>
@@ -373,7 +771,7 @@ export default function Import1CDialog({
             prepared && (
               <button
                 type="button"
-                disabled={busy || !ready}
+                disabled={busy || !ready || (mismatch && !confirmed)}
                 onClick={() => void run()}
               >
                 Importă {ready}{" "}
