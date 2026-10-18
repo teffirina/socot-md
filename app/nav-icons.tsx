@@ -7,6 +7,7 @@ import {
   Factory,
   FileText,
   House,
+  ListChecks,
   Landmark,
   Library,
   Settings,
@@ -20,6 +21,7 @@ import {
 // Menu icons in the Socot.md-GLIA style.
 export const navIcons: Record<string, LucideIcon> = {
   Acasă: House,
+  Sarcini: ListChecks,
   Documente: FileText,
   "Spațiu de lucru": Table2,
   Vânzări: TrendingUp,

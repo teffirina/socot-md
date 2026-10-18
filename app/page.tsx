@@ -8,6 +8,7 @@ import ProductionPanel from "./production-panel";
 import DepreciationPanel from "./depreciation-panel";
 import ConstructionPanel from "./construction-panel";
 import PayrollPanel from "./payroll-panel";
+import TasksPanel, { sideOf, tasksFor } from "./tasks-panel";
 import { workspaces, workspaceParent } from "../lib/workspaces";
 import {
   catalogNames,
@@ -453,6 +454,11 @@ export default function Page() {
           active={workspaceParent(view)}
           query={navQuery}
           journal={demo || can(session.role, "journal.read")}
+          tasks={
+            demo
+              ? (state.tasks ?? []).filter((t) => t.status !== "done").length
+              : tasksFor(state.tasks, sideOf(session.role)).length
+          }
           go={setView}
         />
         <div className="asidebottom">
@@ -533,6 +539,8 @@ export default function Page() {
                   {
                     Acasă:
                       "Solduri, documente recente și lucrurile de rezolvat.",
+                    Sarcini:
+                      "Documentele adăugate, întrebările contabilului și confirmarea înregistrării.",
                     Documente:
                       "Pregătește, verifică și urmărește documentele într-un singur loc.",
                     "Spațiu de lucru":
@@ -682,6 +690,16 @@ export default function Page() {
               snapshot={state}
               journalAccess={demo || can(session.role, "journal.read")}
               personnelAccess={demo || canReadCatalog(session.role, "employee")}
+              navigate={setView}
+            />
+          )}
+          {view === "Sarcini" && engine.current && (
+            <TasksPanel
+              key={engine.current.scope}
+              engine={engine.current}
+              snapshot={state}
+              role={session.role}
+              demo={demo}
               navigate={setView}
             />
           )}

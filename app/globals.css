@@ -2210,3 +2210,136 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
   display: block;
   white-space: normal;
 }
+/* Document tasks between entrepreneur and accountant. */
+.side-nav .nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+.tasks {
+  margin-top: 20px;
+}
+.tasks-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tasks-filter {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0;
+}
+.tasks-filter button {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.tasks-filter button.active {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+.tasks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tasks-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.tasks-item.turn {
+  border-left: 4px solid var(--green);
+}
+.tasks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  border: 0;
+}
+.tasks-head small {
+  display: block;
+  font-weight: 400;
+  margin-top: 2px;
+}
+.tasks-body {
+  padding: 0 14px 14px;
+}
+.tasks-history {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  border-left: 2px solid var(--line);
+}
+.tasks-msg {
+  padding: 4px 0 8px 12px;
+}
+.tasks-msg p {
+  margin: 4px 0 0;
+}
+.tasks-msg.request p,
+.tasks-msg.request small {
+  color: var(--danger);
+}
+.tasks-chip {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+.tasks-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 10px;
+}
+.tasks-confirm h3 {
+  margin: 0 0 6px;
+}
+.tasks-confirm ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+.tasks-request {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.tasks-actions .tasks-request {
+  margin: 0;
+}
+.tasks-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.tasks-check input {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .tasks-actions {
+    grid-template-columns: 1fr;
+  }
+}

@@ -157,3 +157,16 @@ model LegalVersion {
  @@index([actId, language])
  @@index([importedAt, id])
 }
+
+// Accountant's task for a document added by someone who cannot post it.
+model DocumentTask {
+ id String @id
+ companyId String
+ invoiceId String
+ status String
+ data Json
+ version Int
+ updatedAt DateTime @updatedAt
+ @@index([companyId, status])
+ @@index([companyId, invoiceId])
+}

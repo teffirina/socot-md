@@ -13,15 +13,19 @@ export default function SideNav({
   active,
   query,
   journal,
+  tasks = 0,
   go,
 }: {
   active: string;
   query: string;
   journal: boolean;
+  /** document tasks waiting for this person */
+  tasks?: number;
   go: (view: string) => void;
 }) {
   const entries: Entry[] = [
     { label: "Acasă", icon: "Acasă", items: ["Acasă"] },
+    { label: "Sarcini", icon: "Sarcini", items: ["Sarcini"] },
     {
       label: "Spațiu de lucru",
       icon: "Spațiu de lucru",
@@ -81,6 +85,11 @@ export default function SideNav({
             >
               {Icon && <Icon size={17} strokeWidth={1.8} aria-hidden />}
               {label(e.label)}
+              {e.label === "Sarcini" && tasks > 0 && (
+                <span className="nav-badge" aria-label={`${tasks} de făcut`}>
+                  {tasks}
+                </span>
+              )}
             </button>
           );
         const expanded = !!q || current || open.includes(e.label);

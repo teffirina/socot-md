@@ -28,6 +28,12 @@ import {
   type Pending,
 } from "./domain";
 import { read, write, type Snapshot } from "./storage";
+import {
+  applyTaskAction,
+  newTask,
+  type DocumentTask,
+  type TaskAction,
+} from "./tasks";
 export class SyncEngine {
   state: Snapshot = { invoices: [], pending: [] };
   private running = false;
@@ -54,6 +60,8 @@ export class SyncEngine {
         ),
       ];
     }
+    if (this.demo && !this.state.tasks)
+      this.state.tasks = demoTasks(this.state);
     if (!saved && this.demo) await this.deps.write(this.scope, this.state);
     this.changed(this.state, this.demo ? "Demo local • SQLite" : "Conectare…");
   }
@@ -168,6 +176,9 @@ export class SyncEngine {
           ...this.state.invoices.filter((i) => i.id !== invoice.id),
           next,
         ],
+        tasks: old
+          ? this.state.tasks
+          : [newTask(next, "Utilizator demo"), ...(this.state.tasks ?? [])],
         ledger: [
           ...(this.state.ledger ?? []),
           ...journalEntries(
@@ -195,6 +206,60 @@ export class SyncEngine {
       ...this.state,
       drafts: (this.state.drafts ?? []).filter((d) => d.id !== draftId),
       pending: [...this.state.pending, op],
+    });
+  }
+  /** One step on a document task; in the demo `by` names who acts. */
+  async taskAction(input: TaskAction, by = "Utilizator demo") {
+    const tasks = this.state.tasks ?? [];
+    if (!this.demo) {
+      const next: DocumentTask = await this.deps.api("/tasks/action", input);
+      await this.commit({
+        ...this.state,
+        tasks: tasks.map((t) => (t.id === next.id ? next : t)),
+      });
+      await this.sync();
+      return;
+    }
+    const task = tasks.find((t) => t.id === input.id);
+    if (!task) throw Error("Sarcina nu există.");
+    const next = applyTaskAction(task, input, by);
+    let ledger = this.state.ledger;
+    let compliance = this.state.compliance;
+    if (input.action === "confirm") {
+      const proposed = (ledger ?? []).filter(
+        (j) => j.invoiceId === task.invoiceId && j.state === "proposed",
+      );
+      const closed = compliance?.periods.find(
+        (p) =>
+          p.closed &&
+          proposed.some((j) => j.effectiveDate?.startsWith(p.month)),
+      );
+      if (closed) throw Error(`Perioada ${closed.month} este închisă.`);
+      const ids = new Set(proposed.map((j) => j.id));
+      ledger = ledger?.map((j) =>
+        ids.has(j.id) ? { ...j, state: "posted" as const } : j,
+      );
+      if (compliance && proposed.length)
+        compliance = {
+          ...compliance,
+          audit: [
+            {
+              id: crypto.randomUUID(),
+              action: "journal.group.posted",
+              objectId: proposed[0].operationId ?? proposed[0].id,
+              reason: `Confirmat din sarcina pentru ${task.ref}`,
+              actor: by,
+              at: new Date().toISOString(),
+            },
+            ...compliance.audit,
+          ],
+        };
+    }
+    await this.commit({
+      ...this.state,
+      ledger,
+      compliance,
+      tasks: tasks.map((t) => (t.id === next.id ? next : t)),
     });
   }
   async saveCatalog(entry: CatalogEntry, reason: string) {
@@ -403,8 +468,12 @@ export class SyncEngine {
       }
       const catalog: CatalogEntry[] = await this.deps.api("/catalog");
       const invoices: Invoice[] = await this.deps.api("/invoices");
+      const tasks: DocumentTask[] = await this.deps
+        .api("/tasks")
+        .catch(() => this.state.tasks ?? []);
       await this.commit({
         ...this.state,
+        tasks,
         catalog,
         invoices: invoices.slice(-200),
         pending: this.state.pending,
@@ -428,4 +497,26 @@ export class SyncEngine {
       this.running = false;
     }
   }
+}
+
+// Two tasks so the demo shows both sides of the flow.
+function demoTasks(state: Snapshot): DocumentTask[] {
+  const [first, second] = [...state.invoices]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 2);
+  if (!first || !second) return [];
+  const owner = "Antreprenor (demo)";
+  const waiting = newTask(second, owner);
+  const asked = applyTaskAction(
+    waiting,
+    {
+      id: waiting.id,
+      action: "request",
+      baseVersion: 1,
+      items: ["Contractul"],
+      text: "Trimite, te rog, contractul semnat pentru această livrare.",
+    },
+    "Contabil (demo)",
+  );
+  return [newTask(first, owner), asked];
 }
