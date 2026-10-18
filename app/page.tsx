@@ -28,6 +28,8 @@ import HomeDashboard from "./home-dashboard";
 import SideNav from "./side-nav";
 import NewMenu from "./new-menu";
 import Import1CDialog from "./import-1c-dialog";
+import AmountDetail from "./amount-detail";
+import type { DrillRequest } from "../lib/drilldown";
 import { dashboardMoney, monthlyTotals, todayLine } from "../lib/dashboard";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
@@ -60,6 +62,7 @@ export default function Page() {
       file?: File;
     }>(),
     [import1C, setImport1C] = useState(false),
+    [drill, setDrill] = useState<DrillRequest | null>(null),
     [busy, setBusy] = useState(false),
     [query, setQuery] = useState(""),
     [update, setUpdate] = useState<any>(null),
@@ -800,7 +803,24 @@ export default function Page() {
                       {label}
                       <span>{icon}</span>
                     </div>
-                    <strong>{money(Number(value))}</strong>
+                    <strong>
+                      {sales.length ? (
+                        <button
+                          className="amount-link"
+                          title="Vezi documentele, calculul, înregistrările și istoricul"
+                          onClick={() =>
+                            setDrill({
+                              kind: "documents",
+                              invoiceIds: sales.slice(0, 500).map((i) => i.id),
+                            })
+                          }
+                        >
+                          {money(Number(value))}
+                        </button>
+                      ) : (
+                        money(Number(value))
+                      )}
+                    </strong>
                     <small>Din documentele salvate · MDL</small>
                   </article>
                 ))}
@@ -882,8 +902,22 @@ export default function Page() {
                               </small>
                             </td>
                             <td>{i.date}</td>
-                            <td>{money(i.total)}</td>
-                            <td>{money(i.total - i.paid)}</td>
+                            {[i.total, i.total - i.paid].map((v, n) => (
+                              <td key={n}>
+                                <button
+                                  className="amount-link"
+                                  title="Vezi documentul, calculul, înregistrările și istoricul"
+                                  onClick={() =>
+                                    setDrill({
+                                      kind: "documents",
+                                      invoiceIds: [i.id],
+                                    })
+                                  }
+                                >
+                                  {money(v)}
+                                </button>
+                              </td>
+                            ))}
                             <td>
                               <span
                                 className={`badge ${i.paid === i.total ? "paid" : ""}`}
@@ -951,6 +985,14 @@ export default function Page() {
               writable={writable}
               journalAccess={demo || can(session.role, "journal.read")}
               navigate={setView}
+            />
+          )}
+          {drill && (
+            <AmountDetail
+              request={drill}
+              demo={demo}
+              snapshot={state}
+              onClose={() => setDrill(null)}
             />
           )}
           {import1C && engine.current && (
