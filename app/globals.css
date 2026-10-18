@@ -1983,3 +1983,58 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
   background: var(--danger-bg);
   border-color: color-mix(in oklch, var(--danger) 25%, white);
 }
+/* Stock register in Depozit. */
+.stock {
+  margin-top: 20px;
+}
+.stock h3 {
+  margin: 20px 0 8px;
+}
+.stock-method {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stock-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  align-items: end;
+  margin: 12px 0;
+}
+.stock-form .stock-item {
+  grid-column: span 2;
+}
+.stock-form-actions {
+  display: flex;
+  gap: 6px;
+}
+.stock-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 20px;
+}
+.stock td small {
+  display: block;
+  white-space: normal;
+}
+.stock-diff {
+  color: var(--danger);
+}
+.stock-row-actions {
+  white-space: nowrap;
+}
+.stock-row-actions button + button {
+  margin-left: 10px;
+}
+.stock tr.selected td {
+  background: var(--paper);
+}
+@media (max-width: 900px) {
+  .stock-grid {
+    grid-template-columns: 1fr;
+  }
+  .stock-form .stock-item {
+    grid-column: auto;
+  }
+}

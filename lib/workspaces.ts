@@ -219,7 +219,7 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
   Depozit: {
     title: "Depozit",
     icon: "▧",
-    subtitle: "Produse, materiale, unități și locuri de păstrare.",
+    subtitle: "Stocuri evaluate FIFO sau la cost mediu, produse și depozite.",
     steps: [],
     groups: [
       {
@@ -241,7 +241,6 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
     ],
     pending: [
       "Recepții, livrări și transferuri între depozite",
-      "Solduri cantitative și valorice, evaluarea costului",
       "Inventariere, surplusuri și lipsuri",
       "Consumuri și completări/dezasamblări",
       "Obiecte de mică valoare și scurtă durată",
