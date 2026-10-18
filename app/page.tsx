@@ -4,6 +4,7 @@ import SocotSheetsPanel from "./socot-sheets-panel";
 import DocumentsPanel from "./documents-panel";
 import ModuleWorkspace from "./module-workspace";
 import DepreciationPanel from "./depreciation-panel";
+import ConstructionPanel from "./construction-panel";
 import { workspaces, workspaceParent } from "../lib/workspaces";
 import {
   catalogNames,
@@ -685,6 +686,13 @@ export default function Page() {
               snapshot={state}
               writable={writable}
               navigate={setView}
+            />
+          )}
+          {view === "Active" && engine.current && (
+            <ConstructionPanel
+              key={`${engine.current.scope}-construction`}
+              engine={engine.current}
+              writable={writable}
             />
           )}
           {view === "Rapoarte" && (

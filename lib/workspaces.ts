@@ -289,7 +289,7 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
   Active: {
     title: "Active",
     icon: "▣",
-    subtitle: "Mijloacele fixe, responsabilii și uzura calculată automat.",
+    subtitle: "Mijloace fixe, obiecte în construcție și uzura calculată automat.",
     steps: [],
     groups: [
       {
@@ -305,7 +305,6 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
       },
     ],
     pending: [
-      "Intrare și punere în funcțiune",
       "Active necorporale și terenuri",
       "Transfer, modernizare și inventariere",
       "Leasing și răscumpărare",
