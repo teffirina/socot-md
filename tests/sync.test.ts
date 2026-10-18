@@ -30,6 +30,7 @@ function harness() {
       if (path === "/health") return { ok: true };
       if (path === "/catalog") return [];
       if (path === "/invoices") return saved ? [saved] : [];
+      if (path === "/tasks") return [];
       calls++;
       if (seen.has(body.id)) return seen.get(body.id);
       if (conflict)

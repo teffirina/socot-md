@@ -1,3 +1,4 @@
+import type { DocumentTask } from "./tasks";
 import type { CatalogEntry, CatalogPending } from "./catalog";
 import type { Company, Account } from "./company";
 import type { ComplianceState } from "./compliance";
@@ -5,6 +6,7 @@ import type { Invoice, Pending } from "./domain";
 import type { DocumentDraft } from "./document-workflow";
 export type Snapshot = {
   drafts?: DocumentDraft[];
+  tasks?: DocumentTask[];
   invoices: Invoice[];
   catalog?: CatalogEntry[];
   catalogPending?: CatalogPending[];
