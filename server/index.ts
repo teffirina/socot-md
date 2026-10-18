@@ -8,6 +8,7 @@ import { companyRouter } from "./company";
 import { can } from "../lib/permissions";
 import { complianceRouter } from "./compliance";
 import { reconciliationRouter } from "./reconciliation";
+import { drilldownRouter } from "./drilldown";
 import { openTask, tasksRouter } from "./tasks";
 import { ruleSchema, selectRule, assertPeriodOpen } from "../lib/compliance";
 import express from "express";
@@ -167,6 +168,7 @@ app.use("/api", legislationRouter(db));
 app.use("/api", companyRouter(db));
 app.use("/api", complianceRouter(db));
 app.use("/api", reconciliationRouter(db));
+app.use("/api", drilldownRouter(db));
 app.use("/api", tasksRouter(db));
 app.post("/api/operations", async (req, res) => {
   const user = res.locals.user;

@@ -7,6 +7,8 @@ import {
 } from "../lib/ledger-report";
 import type { Snapshot } from "../lib/storage";
 import { api } from "../lib/api";
+import AmountDetail from "./amount-detail";
+import type { Column, DrillRequest } from "../lib/drilldown";
 const money = (v: number) =>
   (v / 100).toLocaleString("ro-MD", {
     minimumFractionDigits: 2,
@@ -26,18 +28,12 @@ export default function LedgerPanel({
     [code, setCode] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [source, setSource] = useState<{
-      id: string;
-      customer: string;
-      date: string;
-      total: number;
-      paid: number;
-    } | null>(null);
+    [drill, setDrill] = useState<DrillRequest | null>(null);
   async function generate(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    setSource(null);
+    setDrill(null);
     try {
       setReport(
         demo
@@ -52,19 +48,32 @@ export default function LedgerPanel({
       setBusy(false);
     }
   }
-  async function document(id: string) {
-    setError("");
-    setSource(null);
-    try {
-      const value = demo
-        ? snapshot.invoices.find((i) => i.id === id)
-        : await api("/source-document", { id });
-      if (!value) throw new Error("Documentul sursă nu este disponibil.");
-      setSource(value);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }
+  const document = (id: string) =>
+    setDrill({ kind: "documents", invoiceIds: [id] });
+  const cell = (account: string, column: Column, value: number, i: number) => (
+    <td key={i}>
+      {value ? (
+        <button
+          className="amount-link"
+          title="Vezi documentele, calculul, înregistrările și istoricul"
+          onClick={() =>
+            report &&
+            setDrill({
+              kind: "account",
+              account,
+              column,
+              from: report.from,
+              to: report.to,
+            })
+          }
+        >
+          {money(value)}
+        </button>
+      ) : (
+        money(value)
+      )}
+    </td>
+  );
   function exportCsv() {
     if (!report) return;
     const rows = code
@@ -126,8 +135,9 @@ export default function LedgerPanel({
       <p className="eyebrow">RAPOARTE CONTABILE</p>
       <h2>Balanță și fișa contului</h2>
       <p className="muted">
-        Alege perioada, apoi un cont pentru a vedea mișcările și documentele
-        sursă. Se includ numai articolele postate cu dată cunoscută.
+        Alege perioada, apoi un cont pentru a vedea mișcările. Apasă pe orice
+        sumă ca să vezi documentele, calculul, înregistrările și istoricul. Se
+        includ numai articolele postate cu dată cunoscută.
       </p>
       <form onSubmit={generate}>
         <div className="formgrid">
@@ -168,13 +178,7 @@ export default function LedgerPanel({
             de deschidere.
           </p>
           <div className="controls">
-            <button
-              className="secondary"
-              onClick={() => {
-                setCode("");
-                setSource(null);
-              }}
-            >
+            <button className="secondary" onClick={() => setCode("")}>
               Toate conturile
             </button>
             <button className="secondary" onClick={exportCsv}>
@@ -206,16 +210,16 @@ export default function LedgerPanel({
                           {a.code} ↗
                         </button>
                       </td>
-                      {[
-                        Math.max(a.opening, 0),
-                        Math.max(-a.opening, 0),
-                        a.debit,
-                        a.credit,
-                        Math.max(a.closing, 0),
-                        Math.max(-a.closing, 0),
-                      ].map((v, i) => (
-                        <td key={i}>{money(v)}</td>
-                      ))}
+                      {(
+                        [
+                          [Math.max(a.opening, 0), "opening"],
+                          [Math.max(-a.opening, 0), "opening"],
+                          [a.debit, "debit"],
+                          [a.credit, "credit"],
+                          [Math.max(a.closing, 0), "closing"],
+                          [Math.max(-a.closing, 0), "closing"],
+                        ] as const
+                      ).map(([v, column], i) => cell(a.code, column, v, i))}
                     </tr>
                   ))}
                 </tbody>
@@ -281,8 +285,30 @@ export default function LedgerPanel({
                         <td>
                           {e.debit} → {e.credit}
                         </td>
-                        <td>{money(e.debitAmount)}</td>
-                        <td>{money(e.creditAmount)}</td>
+                        <td>
+                          {e.debitAmount ? (
+                            <button
+                              className="amount-link"
+                              onClick={() => document(e.invoiceId)}
+                            >
+                              {money(e.debitAmount)}
+                            </button>
+                          ) : (
+                            money(0)
+                          )}
+                        </td>
+                        <td>
+                          {e.creditAmount ? (
+                            <button
+                              className="amount-link"
+                              onClick={() => document(e.invoiceId)}
+                            >
+                              {money(e.creditAmount)}
+                            </button>
+                          ) : (
+                            money(0)
+                          )}
+                        </td>
                         <td>{money(e.balance)}</td>
                       </tr>
                     ))}
@@ -291,26 +317,13 @@ export default function LedgerPanel({
               </div>
             </>
           )}
-          {source && (
-            <article className="reportcard">
-              <h3>Document sursă · {source.id.slice(0, 8)}</h3>
-              <p>
-                {source.customer} · {source.date}
-              </p>
-              <p>
-                Total: {money(source.total)} MDL · Încasat în prezent:{" "}
-                {money(source.paid)} MDL
-              </p>
-              <small>
-                Starea curentă a documentului; încasarea poate include
-                operațiuni ulterioare perioadei raportului.
-              </small>
-              <p>
-                <button className="secondary" onClick={() => setSource(null)}>
-                  Închide detaliile
-                </button>
-              </p>
-            </article>
+          {drill && (
+            <AmountDetail
+              request={drill}
+              demo={demo}
+              snapshot={snapshot}
+              onClose={() => setDrill(null)}
+            />
           )}
         </>
       )}

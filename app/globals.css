@@ -2419,3 +2419,76 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
     grid-template-columns: 1fr;
   }
 }
+/* Amounts in reports open their breakdown. */
+.amount-link {
+  padding: 0;
+  min-height: 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.amount-link:hover,
+.amount-link:focus-visible {
+  color: var(--green);
+  text-decoration-style: solid;
+}
+.amount-detail {
+  max-width: 860px;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+.amount-detail-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.amount-detail-tabs button {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.amount-detail-tabs button.active {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+.amount-detail-tabs small {
+  margin-left: 6px;
+  opacity: 0.7;
+}
+.amount-detail-steps {
+  width: 100%;
+  max-width: 560px;
+}
+.amount-detail-steps .sign {
+  width: 24px;
+  color: var(--muted);
+}
+.amount-detail-steps tr.total td {
+  font-weight: 700;
+  border-top: 2px solid var(--line);
+}
+.amount-detail td small {
+  display: block;
+}
+.amount-detail-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid var(--line);
+}
+.amount-detail-history > li {
+  padding: 4px 0 10px 12px;
+}
+.amount-detail-history p {
+  margin: 4px 0 0;
+}
+.amount-detail-history ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
