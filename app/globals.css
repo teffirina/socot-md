@@ -557,6 +557,7 @@ footer:not(:where([class*="univer-"], [class*="univer-"] *)) {
   display: grid;
   place-items: center;
   padding: 24px;
+  z-index: 90;
 }
 .modal {
   background: white;
@@ -1913,6 +1914,42 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
   font-size: inherit;
 }
 
+/* Scanning an invoice with the phone. */
+.phone-scan {
+  max-width: 420px;
+}
+.phone-kind {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+.phone-kind button {
+  flex: 1;
+  padding: 9px 12px;
+}
+.phone-qr {
+  display: block;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 12px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px;
+}
+.phone-steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+.phone-wait {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.phone-scan .footnote {
+  overflow-wrap: anywhere;
+}
 /* Current month profit next to "+ Nou" on the overview. */
 .heading-actions {
   display: flex;

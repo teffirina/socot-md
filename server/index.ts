@@ -1,5 +1,6 @@
 import { aiRouter } from "./ai";
 import { demoAiRouter } from "./demo-ai";
+import { PhoneScans, phoneApp, phoneScanRouter } from "./phone-scan";
 import { legislationRouter } from "./legislation";
 import { validateDocumentReferences, catalogSchema } from "../lib/catalog";
 import { catalogRouter } from "./catalog";
@@ -44,7 +45,8 @@ app.use(cors({ origin, credentials: true }));
 // Invoice scans carry a base64 file and are parsed after authentication.
 const smallJson = express.json({ limit: "32kb" });
 app.use((req, res, next) =>
-  req.path === "/api/ai/invoice-scan" || req.path === "/api/demo-ai/invoice-scan"
+  req.path === "/api/ai/invoice-scan" ||
+  req.path === "/api/demo-ai/invoice-scan"
     ? next()
     : smallJson(req, res, next),
 );
@@ -66,6 +68,9 @@ app.get("/api/health", async (_req, res) => {
   res.json({ ok: true });
 });
 app.use("/api/demo-ai", demoAiRouter());
+const phoneScans = new PhoneScans();
+const phonePort = Number(process.env.SOCOT_PHONE_PORT ?? 3001);
+app.use("/api/phone-scan", phoneScanRouter(phoneScans, phonePort));
 app.post(
   "/api/login",
   rateLimit({ windowMs: 15 * 60_000, limit: 10 }),
@@ -332,3 +337,8 @@ app.use(
 app.listen(3000, "127.0.0.1", () =>
   console.log("Socot: http://localhost:3000 • API /api"),
 );
+// Phones on the same Wi-Fi reach only the scan page and its upload, never the API.
+if (phonePort)
+  phoneApp(phoneScans).listen(phonePort, "0.0.0.0", () =>
+    console.log(`Socot: scanare cu telefonul pe portul ${phonePort}`),
+  );

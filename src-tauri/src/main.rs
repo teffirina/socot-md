@@ -134,6 +134,8 @@ async fn api_request(path: String, body: Option<Value>) -> Result<Value, String>
         "/demo-ai/status",
         "/demo-ai/interpret",
         "/demo-ai/invoice-scan",
+        "/phone-scan/start",
+        "/phone-scan/poll",
         "/login",
         "/catalog",
         "/legislation/search",
