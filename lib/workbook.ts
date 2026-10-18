@@ -3,7 +3,12 @@ export type Grid = string[][];
 export type Mapping = { customer: number; date: number; total: number };
 export const MAX_ROWS = 501,
   MAX_COLS = 26;
-export function parseDelimited(text: string, delimiter?: string): Grid {
+export function parseDelimited(
+  text: string,
+  delimiter?: string,
+  maxRows = MAX_ROWS,
+  maxCols = MAX_COLS,
+): Grid {
   text = text.replace(/^\uFEFF/, "");
   delimiter ??= text.split(/\r?\n/)[0].includes("\t")
     ? "\t"
@@ -31,9 +36,9 @@ export function parseDelimited(text: string, delimiter?: string): Grid {
         row = [];
       }
     } else value += c;
-    if (rows.length > MAX_ROWS || row.length > MAX_COLS || value.length > 2000)
+    if (rows.length > maxRows || row.length > maxCols || value.length > 2000)
       throw new Error(
-        "Limită: 500 rânduri, 26 coloane, 2000 caractere/celulă.",
+        `Limită: ${maxRows - 1} rânduri, ${maxCols} coloane, 2000 caractere/celulă.`,
       );
   }
   if (quoted) throw new Error("Ghilimele CSV neînchise.");
@@ -41,7 +46,7 @@ export function parseDelimited(text: string, delimiter?: string): Grid {
     row.push(value);
     rows.push(row);
   }
-  if (rows.length > MAX_ROWS || rows.some((r) => r.length > MAX_COLS))
+  if (rows.length > maxRows || rows.some((r) => r.length > maxCols))
     throw new Error("Tabel prea mare.");
   return rows;
 }
