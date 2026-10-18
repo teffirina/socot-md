@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
-import { amount1C, date1C, kindFromText, read1C } from "../lib/import-1c";
+import {
+  amount1C,
+  blankLayout,
+  date1C,
+  detect1C,
+  kindFromText,
+  read1C,
+} from "../lib/import-1c";
+import { checkTotals, partnerBalances } from "../lib/import-check";
 import { gridFrom1CFile } from "../lib/import-1c-file";
 
 test("jurnalul de documente 1C în rusă, cu rânduri de titlu și total", () => {
@@ -146,4 +154,75 @@ test("Excel din 1C cu titlu îmbinat și dată ca dată", async () => {
       ["2026-10-05", 25050],
     );
   await assert.rejects(gridFrom1CFile(new ArrayBuffer(8), "vechi.xls"), /xlsx/);
+});
+
+test("coloanele alese de mână citesc un tabel Excel oarecare", () => {
+  const grid = [
+    ["Raport", "", ""],
+    ["Ziua", "Cine", "Cât"],
+    ["03.10.2026", "Alfa SRL", "100"],
+    ["Total", "", "100"],
+  ];
+  assert.equal(detect1C(grid), null);
+  assert.equal(blankLayout(grid).header, 1);
+  assert.throws(
+    () => read1C(grid, { type: "documents", header: 1, columns: { date: 0 } }),
+    /Contragentul/,
+  );
+  const r = read1C(grid, {
+    type: "documents",
+    header: 1,
+    columns: { date: 0, partner: 1, amount: 2 },
+  });
+  assert.equal(r.type, "documents");
+  if (r.type !== "documents") return;
+  assert.equal(r.rows.length, 1);
+  assert.equal(r.rows[0].total, 10000);
+  assert.equal(r.controlTotal, 10000);
+});
+
+test("totalul din fișier și soldurile pe contragent se verifică", () => {
+  const check = checkTotals(
+    [
+      { total: 100, status: "new" },
+      { total: 50, status: "duplicate" },
+      { total: 0, status: "error" },
+    ],
+    170,
+    150,
+  );
+  assert.deepEqual(check, {
+    rows: 150,
+    importing: 100,
+    duplicates: 50,
+    errors: 1,
+    fileDifference: 20,
+    typedDifference: 0,
+  });
+  const inv = (
+    customer: string,
+    total: number,
+    paid = 0,
+    kind?: "expense",
+  ) => ({
+    id: crypto.randomUUID(),
+    customer,
+    total,
+    paid,
+    version: 1,
+    date: "2026-10-01",
+    kind,
+  });
+  const b = partnerBalances(
+    [
+      inv("Alfa SRL", 1000, 400),
+      inv("Alfa SRL", 500, 0, "expense"),
+      inv("Beta", 9),
+    ],
+    [inv("alfa  srl", 300)],
+  );
+  assert.deepEqual(
+    b.map((x) => [x.kind, x.before, x.imported, x.after]),
+    [["sale", 600, 300, 900]],
+  );
 });
