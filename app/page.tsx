@@ -3,10 +3,7 @@ import AssistantDrawer from "./assistant-drawer";
 import SocotSheetsPanel from "./socot-sheets-panel";
 import DocumentsPanel from "./documents-panel";
 import ModuleWorkspace from "./module-workspace";
-import {
-  workspaces,
-  workspaceParent,
-} from "../lib/workspaces";
+import { workspaces, workspaceParent } from "../lib/workspaces";
 import {
   catalogNames,
   catalogKinds,
@@ -24,7 +21,7 @@ import TutorialButton from "./tutorial";
 import HomeDashboard from "./home-dashboard";
 import SideNav from "./side-nav";
 import NewMenu from "./new-menu";
-import { todayLine } from "../lib/dashboard";
+import { dashboardMoney, monthlyTotals, todayLine } from "../lib/dashboard";
 import CompliancePanel from "./compliance-panel";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -88,6 +85,7 @@ export default function Page() {
     catalogKinds.includes(view.slice(8) as CatalogKind)
       ? (view.slice(8) as CatalogKind)
       : undefined;
+  const today = new Date().toISOString().slice(0, 10);
   const title = scopedKind
     ? scopedKind === "sale"
       ? "Documente de vânzare"
@@ -483,7 +481,9 @@ export default function Page() {
                 demo={demo}
                 invoices={state.invoices}
                 role={session.role}
-                company={demo ? (state.company?.name ?? "demonstrative") : "tale"}
+                company={
+                  demo ? (state.company?.name ?? "demonstrative") : "tale"
+                }
                 navigate={setView}
               />
             )}
@@ -515,7 +515,7 @@ export default function Page() {
             <div>
               <p className="eyebrow">
                 {view === "Acasă"
-                  ? `${todayLine(new Date().toISOString().slice(0, 10))}${demo ? " · Demonstrație" : ""}`
+                  ? `${todayLine(today)}${demo ? " · Demonstrație" : ""}`
                   : demo
                     ? "SOCOT ATELIER SRL · DEMONSTRAȚIE"
                     : "SPAȚIUL TĂU FINANCIAR"}
@@ -549,18 +549,35 @@ export default function Page() {
                     : "Date comune pentru documentele firmei.")}
               </p>
             </div>
-            {writable && (
-              <NewMenu
-                onNew={(kind) => {
-                  setNewDocument({ kind });
-                  setView(`documents:${kind}`);
-                }}
-                onScan={(kind, file) => {
-                  setNewDocument({ kind, file });
-                  setView(`documents:${kind}`);
-                }}
-              />
-            )}
+            <div className="heading-actions">
+              {view === "Acasă" &&
+                (() => {
+                  const month = monthlyTotals(state.invoices, today, 1)[0];
+                  return (
+                    <div
+                      className={`profit-pill ${month.profit < 0 ? "loss" : "gain"}`}
+                      title="Vânzări minus cheltuieli din luna curentă, din documentele salvate"
+                    >
+                      <small>Profit · {month.name}</small>
+                      <strong className="num">
+                        {dashboardMoney(month.profit)}
+                      </strong>
+                    </div>
+                  );
+                })()}
+              {writable && (
+                <NewMenu
+                  onNew={(kind) => {
+                    setNewDocument({ kind });
+                    setView(`documents:${kind}`);
+                  }}
+                  onScan={(kind, file) => {
+                    setNewDocument({ kind, file });
+                    setView(`documents:${kind}`);
+                  }}
+                />
+              )}
+            </div>
           </div>
           {error && (
             <div className="error" role="alert">
@@ -695,7 +712,7 @@ export default function Page() {
           {view === "Acasă" && (
             <HomeDashboard
               snapshot={state}
-              today={new Date().toISOString().slice(0, 10)}
+              today={today}
               writable={writable}
               busy={busy}
               canJournal={demo || can(session.role, "journal.read")}
@@ -784,7 +801,7 @@ export default function Page() {
                         )
                         .slice()
                         .sort((a, b) => b.date.localeCompare(a.date))
-                                                .map((i) => (
+                        .map((i) => (
                           <tr key={i.id}>
                             <td>
                               <strong>{i.customer}</strong>
