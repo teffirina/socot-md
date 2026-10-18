@@ -312,7 +312,8 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
   "Personal și salarii": {
     title: "Personal și salarii",
     icon: "♙",
-    subtitle: "Organizează datele personalului înainte de calculul salarial.",
+    subtitle:
+      "Datele personalului și calculul salarial lunar, recalculat retroactiv.",
     steps: [],
     groups: [
       {
@@ -330,10 +331,9 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
     ],
     pending: [
       "Angajare, transfer și încetarea raporturilor de muncă",
-      "Pontaj și calendare de lucru",
-      "Concedii, indemnizații și solduri de concediu",
-      "Calcul salarial, scutiri, rețineri și contribuții",
-      "Tichete de masă, premii și ajutoare",
+      "Calendare de lucru",
+      "Solduri de concediu",
+      "Tichete de masă și ajutoare",
       "State de plată prin bancă și casă",
       "Rapoarte salariale și declarații validate",
     ],
