@@ -2038,3 +2038,41 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
     grid-column: auto;
   }
 }
+/* Production costing in Producție. */
+.production {
+  margin-top: 20px;
+}
+.production h3 {
+  margin: 20px 0 8px;
+}
+.production td small {
+  display: block;
+  white-space: normal;
+  max-width: 280px;
+}
+.production-form {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 10px 0;
+}
+.production-overheads {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  max-width: 560px;
+}
+.production-overheads li {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.production-overheads li span:first-child {
+  flex: 1;
+}
+.production .depreciation-month select {
+  max-width: 360px;
+}

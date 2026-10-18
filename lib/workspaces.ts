@@ -251,7 +251,7 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
   Producție: {
     title: "Producție",
     icon: "⚒",
-    subtitle: "Pregătirea datelor pentru materiale, produse și subdiviziuni.",
+    subtitle: "Rapoarte de producție și costul efectiv al produselor.",
     steps: [],
     groups: [
       {
@@ -278,10 +278,8 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
     ],
     pending: [
       "Rețete și norme de consum",
-      "Consum de materiale și producție finită",
       "Rapoarte de producție și servicii productive",
       "Producție neterminată",
-      "Repartizarea cheltuielilor indirecte și cost efectiv",
       "Prelucrare la terți și a materialelor clienților",
     ],
   },

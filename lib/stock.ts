@@ -11,13 +11,26 @@ export const stockMethodNames: Record<StockMethod, string> = {
   average: "Cost mediu ponderat",
 };
 
-export const movementTypes = ["receipt", "sale", "consumption"] as const;
+export const movementTypes = [
+  "receipt",
+  "sale",
+  "consumption",
+  "production",
+  "output",
+] as const;
+/** Types entered by hand; production and output come from production reports. */
+export const manualTypes = ["receipt", "sale", "consumption"] as const;
 export type MovementType = (typeof movementTypes)[number];
 export const movementNames: Record<MovementType, string> = {
   receipt: "Intrare",
   sale: "Ieșire la vânzare",
-  consumption: "Consum / dare în producție",
+  consumption: "Consum",
+  production: "Dare în producție",
+  output: "Produse obținute",
 };
+/** Receipts and production output bring stock in, with a known value. */
+export const incoming = (type: MovementType) =>
+  type === "receipt" || type === "output";
 
 export const movementSchema = z
   .object({
@@ -35,7 +48,7 @@ export const movementSchema = z
     note: z.string().max(200).optional(),
   })
   .strict()
-  .refine((m) => m.type !== "receipt" || m.cost !== undefined, {
+  .refine((m) => !incoming(m.type) || m.cost !== undefined, {
     message: "Intrarea are nevoie de valoare.",
   });
 export type Movement = z.infer<typeof movementSchema>;
@@ -58,7 +71,7 @@ export const itemKey = (name: string) => name.trim().toLocaleLowerCase();
 const order = (a: Movement, b: Movement) =>
   a.date.localeCompare(b.date) ||
   // receipts on the same day come before issues
-  Number(a.type !== "receipt") - Number(b.type !== "receipt") ||
+  Number(!incoming(a.type)) - Number(!incoming(b.type)) ||
   a.seq - b.seq;
 
 export function valuate(movements: Movement[], method: StockMethod) {
@@ -76,7 +89,7 @@ export function valuate(movements: Movement[], method: StockMethod) {
         key,
         (s = { item: m.item.trim(), account: m.account, layers: [] }),
       );
-    if (m.type === "receipt") {
+    if (incoming(m.type)) {
       if (method === "fifo")
         s.layers.push({ quantity: m.quantity, value: m.cost! });
       else {
@@ -124,9 +137,13 @@ export function valuate(movements: Movement[], method: StockMethod) {
 }
 
 // Accounting for the cost of issues, per month.
-export const costAccounts: Record<Exclude<MovementType, "receipt">, string> = {
+export const costAccounts: Record<
+  Exclude<MovementType, "receipt" | "output">,
+  string
+> = {
   sale: "711",
   consumption: "811",
+  production: "811",
 };
 
 export type Entry = { debit: string; credit: string; amount: number };
@@ -139,13 +156,23 @@ export type StockDecisions = Record<
   >
 >;
 
-export function monthEntries(valued: Valued[], month: string): Entry[] {
+export function monthEntries(
+  valued: Valued[],
+  month: string,
+  extra: Entry[] = [],
+): Entry[] {
   const sums = new Map<string, number>();
+  const add = (k: string, amount: number) =>
+    sums.set(k, (sums.get(k) ?? 0) + amount);
   for (const v of valued)
-    if (v.type !== "receipt" && v.date.startsWith(month) && v.value) {
-      const k = `${costAccounts[v.type]}|${v.account}`;
-      sums.set(k, (sums.get(k) ?? 0) + v.value);
-    }
+    if (v.date.startsWith(month) && v.value && v.type !== "receipt")
+      add(
+        v.type === "output"
+          ? `${v.account}|${costAccounts.production}`
+          : `${costAccounts[v.type]}|${v.account}`,
+        v.value,
+      );
+  for (const e of extra) if (e.amount) add(`${e.debit}|${e.credit}`, e.amount);
   return [...sums]
     .map(([k, amount]) => {
       const [debit, credit] = k.split("|");
@@ -162,8 +189,13 @@ export type EntryStatus = Entry & {
 };
 
 /** Every month with issues or decisions, newest first, with what changed. */
-export function review(valued: Valued[], decisions: StockDecisions) {
+export function review(
+  valued: Valued[],
+  decisions: StockDecisions,
+  extra: Record<string, Entry[]> = {},
+) {
   const months = new Set([
+    ...Object.keys(extra),
     ...valued
       .filter((v) => v.type !== "receipt")
       .map((v) => v.date.slice(0, 7)),
@@ -172,7 +204,7 @@ export function review(valued: Valued[], decisions: StockDecisions) {
   return [...months]
     .sort((a, b) => b.localeCompare(a))
     .map((month) => {
-      const current = monthEntries(valued, month);
+      const current = monthEntries(valued, month, extra[month]);
       const keys = new Set([
         ...current.map((e) => `${e.debit}|${e.credit}`),
         ...Object.keys(decisions[month] ?? {}),
