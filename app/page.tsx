@@ -7,6 +7,7 @@ import StockPanel from "./stock-panel";
 import ProductionPanel from "./production-panel";
 import DepreciationPanel from "./depreciation-panel";
 import ConstructionPanel from "./construction-panel";
+import PayrollPanel from "./payroll-panel";
 import { workspaces, workspaceParent } from "../lib/workspaces";
 import {
   catalogNames,
@@ -707,6 +708,13 @@ export default function Page() {
               snapshot={state}
               writable={writable}
               navigate={setView}
+            />
+          )}
+          {view === "Personal și salarii" && engine.current && (
+            <PayrollPanel
+              key={`${engine.current.scope}-payroll`}
+              engine={engine.current}
+              writable={writable}
             />
           )}
           {view === "Depozit" && engine.current && (
