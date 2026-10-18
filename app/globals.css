@@ -2182,3 +2182,79 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
   margin: 4px 0 0;
   padding-left: 20px;
 }
+.import-columns {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.import-columns summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.import-columns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.import-columns-grid label,
+.import-check-typed {
+  display: grid;
+  gap: 4px;
+}
+.import-columns-grid select {
+  min-width: 0;
+}
+.import-check {
+  margin-top: 16px;
+}
+.import-check h3 {
+  margin: 0 0 8px;
+}
+.import-check-sums {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.import-check-sums div {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.import-check-sums dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+.import-check-typed {
+  max-width: 320px;
+  margin: 8px 0;
+}
+.import-check-ok {
+  color: var(--green);
+}
+.import-check-bad {
+  color: var(--danger);
+}
+.import-check-balance {
+  width: 120px;
+  min-height: 0;
+  text-align: right;
+}
+.import-check td small {
+  display: block;
+}
+.import-check-confirm {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+}
+.import-check-confirm input {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+}

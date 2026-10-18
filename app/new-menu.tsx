@@ -113,8 +113,8 @@ export default function NewMenu({
           >
             <DatabaseZap size={16} aria-hidden />
             <span>
-              Importă din 1C
-              <small>Documente sau contragenți, din Excel/CSV</small>
+              Importă din 1C sau Excel
+              <small>Alegi coloanele și verifici totalurile</small>
             </span>
           </button>
         </div>
