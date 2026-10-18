@@ -3,28 +3,31 @@ import { useEffect, useState } from "react";
 import { dashboardDate, dashboardMoney } from "../lib/dashboard";
 import { readValue, writeValue, type Snapshot } from "../lib/storage";
 import {
+  demoRegister,
+  runRegister,
+  stockKey,
+  type StockRegister,
+} from "../lib/production";
+import {
   decideEntry,
+  manualTypes,
   movementNames,
-  movementTypes,
   parseLei,
   parseQuantity,
   review,
   stockMethodNames,
   stockMethods,
-  valuate,
   type Movement,
-  type StockDecisions,
   type StockMethod,
 } from "../lib/stock";
 import type { SyncEngine } from "../lib/sync";
 
-type Register = {
-  method: StockMethod;
-  movements: Movement[];
-  decisions: StockDecisions;
-};
+type Register = StockRegister;
 
 const money = (bani: number) => dashboardMoney(bani, false);
+const entryNames: Record<string, string> = {
+  "811|821": "Cheltuieli indirecte repartizate pe producție",
+};
 const qty = (thousandths: number) =>
   (thousandths / 1000).toLocaleString("ro-MD", { maximumFractionDigits: 3 });
 const stockAccounts = [
@@ -32,36 +35,6 @@ const stockAccounts = [
   ["211", "211 · Materiale"],
   ["216", "216 · Produse"],
 ] as const;
-
-function demoRegister(): Register {
-  const day = (monthsAgo: number, d: number) => {
-    const x = new Date();
-    x.setUTCDate(d);
-    x.setUTCMonth(x.getUTCMonth() - monthsAgo);
-    return x.toISOString().slice(0, 10);
-  };
-  const rows: [string, Movement["type"], string, number, number?][] = [
-    [day(1, 3), "receipt", "Hârtie A4, top", 100, 6500],
-    [day(1, 12), "receipt", "Hârtie A4, top", 50, 3750],
-    [day(1, 20), "sale", "Hârtie A4, top", 80],
-    [day(0, 2), "receipt", "Hârtie A4, top", 40, 3200],
-    [day(0, 6), "sale", "Hârtie A4, top", 60],
-  ];
-  return {
-    method: "fifo",
-    decisions: {},
-    movements: rows.map(([date, type, item, q, lei], seq) => ({
-      id: `demo-${seq}`,
-      seq,
-      date,
-      type,
-      item,
-      quantity: q * 1000,
-      cost: lei === undefined ? undefined : lei * 100,
-      account: "217",
-    })),
-  };
-}
 
 const empty = {
   date: new Date().toISOString().slice(0, 10),
@@ -83,7 +56,7 @@ export default function StockPanel({
   snapshot: Snapshot;
   writable: boolean;
 }) {
-  const key = `${engine.scope}:stock-v1`;
+  const key = stockKey(engine.scope);
   const [register, setRegister] = useState<Register | null>(null);
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState<string | null>(null);
@@ -107,8 +80,8 @@ export default function StockPanel({
     };
   }, [key, engine.demo]);
   if (!register) return null;
-  const { valued, balances } = valuate(register.movements, register.method);
-  const months = review(valued, register.decisions).slice(0, 12);
+  const { valued, balances, extra } = runRegister(register);
+  const months = review(valued, register.decisions, extra).slice(0, 12);
   const items = (snapshot.catalog ?? [])
     .filter((e) => e.kind === "item" && e.active)
     .map((e) => e.name);
@@ -227,7 +200,7 @@ export default function StockPanel({
                 setForm({ ...form, type: e.target.value as Movement["type"] })
               }
             >
-              {movementTypes.map((t) => (
+              {manualTypes.map((t) => (
                 <option key={t} value={t}>
                   {movementNames[t]}
                 </option>
@@ -331,7 +304,7 @@ export default function StockPanel({
                       {m.error && <small className="error">{m.error}</small>}
                     </td>
                     <td className="stock-row-actions">
-                      {writable && (
+                      {writable && !m.id.includes(":") && (
                         <>
                           <button
                             className="textbutton"
@@ -418,9 +391,12 @@ export default function StockPanel({
                     <td className="num">
                       Dt {row.debit} · Ct {row.credit}
                       <small>
-                        {row.debit === "711"
-                          ? "Costul mărfurilor vândute"
-                          : "Consum în activitatea de bază"}
+                        {entryNames[`${row.debit}|${row.credit}`] ??
+                          (row.debit === "711"
+                            ? "Costul mărfurilor vândute"
+                            : row.credit === "811"
+                              ? "Produse obținute la cost efectiv"
+                              : "Consum în activitatea de bază")}
                       </small>
                     </td>
                     <td className="num right">
@@ -514,6 +490,7 @@ export default function StockPanel({
         Mișcările și deciziile se păstrează în acest profil. Articolele
         acceptate nu se postează încă automat în registrul contabil general.
         Ieșirile la vânzare se înregistrează Dt 711, consumurile Dt 811.
+        Producția se introduce în secțiunea Producție.
       </p>
     </section>
   );
