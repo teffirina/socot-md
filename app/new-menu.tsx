@@ -1,7 +1,14 @@
 "use client";
-import { ChevronDown, FilePlus2, Plus, ScanLine } from "lucide-react";
+import {
+  ChevronDown,
+  FilePlus2,
+  Plus,
+  ScanLine,
+  Smartphone,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { scanFileTypes } from "../lib/invoice-scan";
+import PhoneScanDialog from "./phone-scan-dialog";
 
 type Kind = "sale" | "expense";
 
@@ -14,6 +21,7 @@ export default function NewMenu({
   onScan: (kind: Kind, file: File) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState(false);
   const scanKind = useRef<Kind>("expense");
   const input = useRef<HTMLInputElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -82,7 +90,29 @@ export default function NewMenu({
               </span>
             </button>
           ))}
+          <button
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              setPhone(true);
+            }}
+          >
+            <Smartphone size={16} aria-hidden />
+            <span>
+              Scanează cu telefonul
+              <small>Poză sau PDF, prin cod QR</small>
+            </span>
+          </button>
         </div>
+      )}
+      {phone && (
+        <PhoneScanDialog
+          onClose={() => setPhone(false)}
+          onFile={(kind, file) => {
+            setPhone(false);
+            onScan(kind, file);
+          }}
+        />
       )}
       <input
         ref={input}
