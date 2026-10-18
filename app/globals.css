@@ -2182,3 +2182,31 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
   margin: 4px 0 0;
   padding-left: 20px;
 }
+/* Payroll in Personal și salarii. */
+.payroll {
+  margin-top: 20px;
+}
+.payroll h3 {
+  margin: 20px 0 8px;
+}
+.payroll-input {
+  width: 100%;
+  min-height: 0;
+}
+.payroll-alert {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+}
+.payroll-total td {
+  font-weight: 600;
+  border-top: 2px solid var(--line);
+}
+.payroll-correction td {
+  color: var(--danger);
+}
+.payroll-table td small {
+  display: block;
+  white-space: normal;
+}
