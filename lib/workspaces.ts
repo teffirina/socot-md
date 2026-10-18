@@ -219,7 +219,7 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
   Depozit: {
     title: "Depozit",
     icon: "▧",
-    subtitle: "Produse, materiale, unități și locuri de păstrare.",
+    subtitle: "Stocuri evaluate FIFO sau la cost mediu, produse și depozite.",
     steps: [],
     groups: [
       {
@@ -241,7 +241,6 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
     ],
     pending: [
       "Recepții, livrări și transferuri între depozite",
-      "Solduri cantitative și valorice, evaluarea costului",
       "Inventariere, surplusuri și lipsuri",
       "Consumuri și completări/dezasamblări",
       "Obiecte de mică valoare și scurtă durată",
@@ -252,7 +251,7 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
   Producție: {
     title: "Producție",
     icon: "⚒",
-    subtitle: "Pregătirea datelor pentru materiale, produse și subdiviziuni.",
+    subtitle: "Rapoarte de producție și costul efectiv al produselor.",
     steps: [],
     groups: [
       {
@@ -279,17 +278,15 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
     ],
     pending: [
       "Rețete și norme de consum",
-      "Consum de materiale și producție finită",
       "Rapoarte de producție și servicii productive",
       "Producție neterminată",
-      "Repartizarea cheltuielilor indirecte și cost efectiv",
       "Prelucrare la terți și a materialelor clienților",
     ],
   },
   Active: {
     title: "Active",
     icon: "▣",
-    subtitle: "Evidența de referință a mijloacelor fixe și a responsabililor.",
+    subtitle: "Mijloace fixe, obiecte în construcție și uzura calculată automat.",
     steps: [],
     groups: [
       {
@@ -298,18 +295,17 @@ export const workspaces: Record<string, WorkspaceDefinition> = {
           catalog(
             "asset",
             "Registrul mijloacelor fixe",
-            "Fișe de referință, locație și responsabil. Fără amortizare automată.",
+            "Fișe cu valoare, durată, locație și responsabil; uzura se calculează din ele.",
           ),
           catalog("warehouse", "Locații", "Locurile de păstrare a bunurilor."),
         ],
       },
     ],
     pending: [
-      "Intrare și punere în funcțiune",
       "Active necorporale și terenuri",
       "Transfer, modernizare și inventariere",
       "Leasing și răscumpărare",
-      "Amortizare contabilă și fiscală",
+      "Amortizare fiscală și metode degresive",
       "Ieșire, casare și rapoarte specifice",
     ],
   },
