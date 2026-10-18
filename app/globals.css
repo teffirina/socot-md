@@ -1983,3 +1983,36 @@ h2:not(:where([class*="univer-"], [class*="univer-"] *)),
   background: var(--danger-bg);
   border-color: color-mix(in oklch, var(--danger) 25%, white);
 }
+/* Depreciation proposals in Active. */
+.depreciation {
+  margin-top: 20px;
+}
+.depreciation-month {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.depreciation td small {
+  display: block;
+  max-width: 220px;
+  white-space: normal;
+}
+.depreciation-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.depreciation-actions button {
+  padding: 6px 12px;
+}
+.depreciation-foot {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0 6px;
+}
+.depreciation-incomplete ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}

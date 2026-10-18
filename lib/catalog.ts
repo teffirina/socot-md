@@ -201,6 +201,17 @@ export const catalogFields: Record<CatalogKind, CatalogField[]> = {
   asset: [
     { key: "responsibleId", label: "Responsabil", ref: "employee" },
     { key: "warehouseId", label: "Locație / depozit", ref: "warehouse" },
+    { key: "inServiceDate", label: "Data punerii în funcțiune", type: "date" },
+    { key: "cost", label: "Valoarea de intrare (MDL)", type: "number" },
+    { key: "residual", label: "Valoarea reziduală (MDL)", type: "number" },
+    { key: "lifeMonths", label: "Durata de utilizare (luni)", type: "number" },
+    {
+      key: "openingDepreciation",
+      label: "Uzura acumulată la preluare (MDL)",
+      type: "number",
+    },
+    { key: "expenseAccount", label: "Cont de cheltuieli (Dt, implicit 713)" },
+    { key: "depreciationAccount", label: "Cont de amortizare (Ct, implicit 124)" },
   ],
   category: [
     {

@@ -3,6 +3,7 @@ import AssistantDrawer from "./assistant-drawer";
 import SocotSheetsPanel from "./socot-sheets-panel";
 import DocumentsPanel from "./documents-panel";
 import ModuleWorkspace from "./module-workspace";
+import DepreciationPanel from "./depreciation-panel";
 import { workspaces, workspaceParent } from "../lib/workspaces";
 import {
   catalogNames,
@@ -674,6 +675,15 @@ export default function Page() {
               snapshot={state}
               journalAccess={demo || can(session.role, "journal.read")}
               personnelAccess={demo || canReadCatalog(session.role, "employee")}
+              navigate={setView}
+            />
+          )}
+          {view === "Active" && engine.current && (
+            <DepreciationPanel
+              key={engine.current.scope}
+              engine={engine.current}
+              snapshot={state}
+              writable={writable}
               navigate={setView}
             />
           )}

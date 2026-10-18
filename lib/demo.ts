@@ -57,8 +57,42 @@ export function demoData(): Snapshot {
       invoices.push(next);
     } else invoices.push(issued);
   });
+  const monthsAgo = (n: number) => {
+    const d = new Date();
+    d.setUTCDate(10);
+    d.setUTCMonth(d.getUTCMonth() - n);
+    return d.toISOString().slice(0, 10);
+  };
+  const asset = (
+    code: string,
+    name: string,
+    details: Record<string, string>,
+  ) => ({
+    id: crypto.randomUUID(),
+    kind: "asset" as const,
+    code,
+    name,
+    version: 1,
+    active: true,
+    details,
+  });
   return {
     invoices,
+    catalog: [
+      asset("MF-001", "Laptop pentru contabilitate", {
+        inServiceDate: monthsAgo(1),
+        cost: "24000",
+        residual: "0",
+        lifeMonths: "36",
+      }),
+      asset("MF-002", "Autoturism de serviciu", {
+        inServiceDate: monthsAgo(14),
+        cost: "280000",
+        residual: "30000",
+        lifeMonths: "60",
+        openingDepreciation: "54166.67",
+      }),
+    ],
     pending: [],
     ledger,
     compliance: initialCompliance(),
